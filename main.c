@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LIMPAR_TELA system("cls")
 /* ===================== CONSTANTES ===================== */
 #define MAX_CPF 20
 #define MAX_NOME 100
@@ -18,13 +17,13 @@
 #define ARQ_TURMAS "turmas.txt"
 
 /* ===================== ESTRUTURAS ===================== */
-typedef struct discente{
+typedef struct {
      char cpf[MAX_CPF];
      char nome[MAX_NOME];
      int idade;
 } Discente;
 
-typedef struct curso{
+typedef struct {
      char codigo[MAX_CODIGO];
      char nome[MAX_NOME];
      int horas;
@@ -32,7 +31,7 @@ typedef struct curso{
      int participantes;
 } Curso;
 
-typedef struct turma{
+typedef struct {
      int numero;
      char cpf[MAX_CPF];
      char codigo_curso[MAX_CODIGO];
@@ -64,16 +63,14 @@ void pausar() {
      getchar();
 }
 
-void limpar_tela() { system("cls"); }
-
-void cabecalho(const char* titulo) {
-     limpar_tela();
+void cabecalho(const char titulo[]) {
+     system("cls");
      printf("   ESCOLA TOP-ART-BARE  |  %s\n", titulo);
      printf("\n");
 }
 
 /* =============== VALIDACOES ========================= */
-int cpf_valido(const char* cpf) {
+int cpf_valido(const char cpf[]) {
      int i;
      if (strlen(cpf) != 11) return 0;
 
@@ -87,39 +84,27 @@ int cpf_valido(const char* cpf) {
 
 /* ===================== LEITURA SEGURA ===================== */
 
-// Ler entrada estabelecendo uma legenda e um limite de números
+// Ler uma string estabelecendo uma legenda e um limite de leitura
 void ler_string(const char legenda[], char dest[], int max) {
      printf("%s", legenda);
      fgets(dest, max, stdin);
      dest[strcspn(dest, "\n")] = '\0';
 }
 
+// Ler um número inteiro estabelendo uma legenda e intervalo
 int ler_inteiro(const char legenda[], int min, int max_val) {
-     int valor;
-     char buf[50];
-     while (1) {
-          printf("%s", legenda);
-          fgets(buf, sizeof(buf), stdin);
-          if (sscanf(buf, "%d", &valor) == 1 && valor >= min &&
-              valor <= max_val)
-               return valor;
-          printf("  [!] Valor inválido. Digite entre %d e %d.\n", min, max_val);
-     }
+    int valor; char buf[50];
+
+    while (1) {
+         printf("%s", legenda);
+         fgets(buf, sizeof(buf), stdin);
+         if (sscanf(buf, "%d", &valor) == 1 && valor >= min && valor <= max_val) 
+            return valor;
+         printf("  [!] Valor inválido. Digite entre %d e %d.\n", min, max_val);
+    }
 }
 
 /* ===================== DISCENTES - ARQUIVO ===================== */
-int contar_discentes() {
-     FILE* f = fopen(ARQ_DISCENTES, "r");
-     if (!f) return 0;
-
-     int cont = 0;
-     char linha[200];
-     while (fgets(linha, sizeof(linha), f)) cont++;
-
-     fclose(f);
-     return cont;
-}
-
 void carregar_discentes() {
      FILE *f = fopen(ARQ_DISCENTES, "r");
      if (!f) { printf("Error ao carregar"); pausar(); return; }
@@ -129,7 +114,7 @@ void carregar_discentes() {
             fscanf(f, "%14[^|]|%99[^|]|%d\n", 
                    discentes[total_discentes].cpf,
                    discentes[total_discentes].nome,
-                  &discentes[total_discentes].idade) == 3) {total_discentes++;}
+                  &discentes[total_discentes].idade) == 3) total_discentes++;
      fclose(f);
 }
 
@@ -146,25 +131,52 @@ void salvar_discentes() {
      fclose(f);
 }
 
-int cpf_discente_existe(const char* cpf) {
-     // verificar depois
-     /* int total;
-     Discente lista[] = carregar_discentes(&total);
-     int encontrado = 0;
-     int i;
+/* ======================== CURSO - ARQUIVO ======================== */
+void salvar_cursos(){
+    FILE *f =fopen(ARQ_CURSOS, "w"); if(!f) {pausar();return;}
 
-     for (i = 0; i < total; i++) {
-         if (strcmp(lista[i].cpf, cpf) == 0) { encontrado = 1; break; }
-     }
+    int i;
+    for (i = 0; i < total_cursos; i++){
+        fprintf(f, "%s|%s|%d|%d|%d\n",  cursos[i].codigo,
+                                        cursos[i].nome,
+                                        cursos[i].horas,
+                                        cursos[i].vagas,
+                                        cursos[i].participantes);
+    }
+    fclose(f);
+}
 
-     free(lista);
-     return encontrado; */
+void carregar_cursos(){
+    FILE *f = fopen(ARQ_CURSOS, "r"); if(!f) return;
+
+    total_cursos = 0;
+    char linha[100];
+    while(total_cursos < MAX_CURSOS && fgets(linha, sizeof(linha), f) != NULL){
+        char *token = strtok(linha, "|");
+        if(token) strcpy(cursos[total_cursos].codigo, token);
+        
+        token = strtok(NULL, "|");
+        if(token) strcpy(cursos[total_cursos].nome, token);
+        
+        token = strtok(NULL, "|");
+        if(token) cursos[total_cursos].horas = atoi(token);
+        
+        token = strtok(NULL, "|");
+        if(token) cursos[total_cursos].vagas = atoi(token);
+        
+        token = strtok(NULL, "|");
+        if(token) cursos[total_cursos].participantes = atoi(token);
+
+        total_cursos++;
+    }
+    
+    fclose(f);
 }
 
 /* ===================== FUNÇÕES BUSCA AUXILIAR ===================== */
 
 // Busca o índice do discente, caso contrário -1
-int buscar_discente_por_cpf(char cpf[]) {
+int buscar_discente_cpf(char cpf[]) {
      int i;
      for (i = 0; i < total_discentes; i++) {
           if (strcmp(discentes[i].cpf, cpf) == 0) {
@@ -172,6 +184,13 @@ int buscar_discente_por_cpf(char cpf[]) {
           }
      }
      return -1;
+}
+
+int buscar_curso_codigo(const char busca[]){
+    int i;
+    for(i = 0; i < total_cursos; i++)    
+        if(strcmp(cursos[i].codigo, busca) == 0) return i;
+    return -1;
 }
 
 void listar(){
@@ -182,7 +201,7 @@ void listar(){
     puts("------------------------------");
 }
 
-/* ============== MENU DISCENTE ================*/
+/* ======================== MENU DISCENTE - CRUD ========================= */
 void editar_discente(){
     cabecalho(" DISCENTE > EDITAR");
 
@@ -190,16 +209,16 @@ void editar_discente(){
 
     char cpf[MAX_CPF];
     ler_string(" CPF do discente: ", cpf, MAX_CPF);
-    int idx = buscar_discente_por_cpf(cpf);
+    int idx = buscar_discente_cpf(cpf);
     if(idx < 0){
         printf(" Discente não existe"); pausar(); return;
     }
     //printf("--> %s\n", discentes[idx].nome);
     
-    printf("\t%s \t\t\t%s \t\t\t%s\n", "[1] CPF", "[2] NOME", "[3] IDADE" );
-    printf("\t%s \t\t\t%10s \t\t\t%d"  ,  discentes[idx].cpf,
-                                        discentes[idx].nome,
-                                        discentes[idx].idade);
+    printf("%-15s %-40s %s\n", "[1] CPF", "[2] NOME", "[3] IDADE" );
+    printf("%-15s %-40s %d", discentes[idx].cpf, 
+                             discentes[idx].nome, 
+                             discentes[idx].idade);
     
     int opt = ler_inteiro(" \n--> Escolha o que editar: ", 0, 3);
 
@@ -233,9 +252,9 @@ void excluir_discente(){
     char cpf[MAX_CPF]; // entrada do usuário
     ler_string("  CPF do discente: ", cpf, MAX_CPF);    
 
-    int idx = buscar_discente_por_cpf(cpf);
+    int idx = buscar_discente_cpf(cpf);
     if(idx < 0){ // Caso de discente não registrado
-        printf("\n  [!] Discente NoN Ecziste.\n"); pausar(); return;
+        printf("\n  [!] Discente não está registrado.\n"); pausar(); return;
     }
 
     char sn[3];
@@ -254,8 +273,6 @@ void excluir_discente(){
     salvar_discentes();
     printf("  [!] Discente Excluído."); pausar(); return;    
 }
-
-
 
 void inserir_discente() {
     cabecalho("DISCENTES > INSERIR");   
@@ -285,12 +302,12 @@ void menu_discentes() {
      int op;
      do {
         cabecalho("DISCENTES");
-        printf("  [1] Inserir\n");
-        printf("  [2] Editar\n");
-        printf("  [3] Excluir\n");
-        printf("  [4] Pesquisar\n");
-        printf("  [0] Voltar\n\n");
-        op = ler_inteiro("  Opção: ", 0, 4);
+        printf(" [1] Inserir\n");
+        printf(" [2] Editar\n");
+        printf(" [3] Excluir\n");
+        printf(" [4] Pesquisar\n");
+        printf(" [0] Voltar\n");
+        op = ler_inteiro("     Opção: ", 0, 4);
         switch (op) {
                 case 1: inserir_discente(); break;
                 case 2: editar_discente(); break;
@@ -300,6 +317,76 @@ void menu_discentes() {
      } while (op != 0);
 }
 
+/* ================ MENU CURSO - CRUD ============*/
+void excluir_curso(){
+    cabecalho("   CURSO > EXCLUIR");
+
+    char cod_alto[MAX_CODIGO];
+    ler_string("  Código: ", cod_alto, MAX_CODIGO);
+
+    int cdx = buscar_curso_codigo(cod_alto);
+    if(cdx < 0) {printf(" [!] Curso não existe"); pausar(); return;}
+
+    int i;
+    for(i = cdx; i < total_cursos; i++) {
+        cursos[i] = cursos[i + 1];
+    }
+    
+    total_cursos--;
+    salvar_cursos();
+    pausar();
+    
+}
+
+void editar_curso(){
+
+}
+
+void inserir_curso(){
+    cabecalho("CURSO > INSERIR");
+
+    Curso novo;
+    novo.participantes = 0;
+
+    ler_string(" Código: ", novo.codigo, MAX_CODIGO);
+    ler_string(" Nome: ", novo.nome, MAX_NOME);
+
+    novo.horas = ler_inteiro("  Horas: ", 1, 9999);
+    novo.vagas = ler_inteiro(" Vagas: ", 1, 60);
+
+    cursos[total_cursos] = novo;
+    total_cursos++;
+    salvar_cursos();
+    printf("\n  [OK] Curso cadastrado!\n");
+    pausar();
+}
+
+void menu_cursos(){
+    int op;
+    do
+    {
+        cabecalho("CURSO");
+        printf(" [1] Inserir\n");
+        printf(" [2] Editar\n");
+        printf(" [3] Excluir\n");
+        printf(" [4] Pesquisar\n");
+        printf(" [0] Sair\n");
+        op = ler_inteiro("     Opção: ", 0 , 4);
+        switch (op) {
+        case 1: inserir_curso(); break;
+        case 2: editar_curso();  break;
+        case 3: excluir_curso(); break;
+        
+        default:
+            break;
+        }
+        
+    } while (op != 0);
+    
+}
+
+
+/* ================ MENU PRINCIPAL ===============*/
 void menu_principal() {
     int op;
     do {
@@ -311,12 +398,12 @@ void menu_principal() {
         printf(" [0] Sair\n");
 
         /* Validando numeros inteiros */
-        op = ler_inteiro("  Opção: ", 0, 4);
+        op = ler_inteiro("     Opção: ", 0, 4);
         switch (op) {
             case 1:
                    menu_discentes(); break;
             case 2:
-                   printf("Vc esta na op2"); break;
+                   menu_cursos(); break;
             case 3:
                    printf("Vc esta na op3"); break;
             case 4:
@@ -328,9 +415,11 @@ void menu_principal() {
     } while (op != 0);
 }
 
+/* ================ MAIN ===============*/
 int main() {
      system("chcp 65001 > nul");
      carregar_discentes();
+     carregar_cursos();
 
      menu_principal();
 
