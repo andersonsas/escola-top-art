@@ -173,6 +173,49 @@ void carregar_cursos(){
     fclose(f);
 }
 
+/* ======================== TURMA - ARQUIVO ========================*/
+void carregar_turma(){
+    FILE *f = fopen(ARQ_TURMAS, "r");
+    if(!f){printf(" [!] Carregar turma falhou"); pausar(); return;}
+
+    char linha[128];
+    int total_turmas = 0;
+    while(total_turmas < MAX_TURMAS && fgets(linha, sizeof(linha), f)){
+        char *token = strtok(linha, "|");
+        if(token) turmas[total_turmas].numero = atoi(token);
+        
+        token = strtok(NULL, "|");
+        if(token) strcpy(turmas[total_turmas].cpf, token);
+        
+        token = strtok(NULL, "|");
+        if(token) strcpy(turmas[total_turmas].codigo_curso, token);
+        
+        token = strtok(NULL, "|");
+        if(token) turmas[total_turmas].ano = atoi(token);
+        
+        token = strtok(NULL, "|");
+        if(token) turmas[total_turmas].nota = atof(token);
+
+        token = strtok(NULL, "|\n");
+        if(token) turmas[total_turmas++].hora_participacao = atoi(token);
+    }
+    fclose(f);
+}
+
+void salvar_turma(){
+    FILE *f = fopen(ARQ_TURMAS, "w");
+    if(!f){printf("  [!] Salvar turma falhou"); pausar(); return;}
+
+    for(int i = 0; i < total_turmas; i++)
+        fprintf(f, "%d|%14[^|]|%10[^|]|%d|%f|%d\n", turmas[i].numero, 
+                                                    turmas[i].cpf, 
+                                                    turmas[i].codigo_curso,
+                                                    turmas[i].ano,
+                                                    turmas[i].nota,
+                                                    turmas[i].hora_participacao);
+    fclose(f);
+}
+
 /* ===================== FUNÇÕES BUSCA AUXILIAR ===================== */
 
 // Busca o índice do discente, caso contrário -1
@@ -193,6 +236,7 @@ int buscar_curso_codigo(const char busca[]){
     return -1;
 }
 
+/* ======================== *LISTAGEM* =================================  */
 void listar(){
     int i;
     for(i = 0; i < total_discentes; i++){
@@ -210,17 +254,14 @@ void editar_discente(){
     char cpf[MAX_CPF];
     ler_string(" CPF do discente: ", cpf, MAX_CPF);
     int idx = buscar_discente_cpf(cpf);
-    if(idx < 0){
-        printf(" Discente não existe"); pausar(); return;
-    }
-    //printf("--> %s\n", discentes[idx].nome);
+    if(idx < 0){printf(" Discente não existe"); pausar(); return;}    
     
     printf("%-15s %-40s %s\n", "[1] CPF", "[2] NOME", "[3] IDADE" );
     printf("%-15s %-40s %d", discentes[idx].cpf, 
                              discentes[idx].nome, 
                              discentes[idx].idade);
     
-    int opt = ler_inteiro(" \n--> Escolha o que editar: ", 0, 3);
+    int opt = ler_inteiro(" \n Escolha o que editar: ", 0, 3);
 
     char novo_cpf[MAX_CPF];
     char novo_nome[MAX_NOME];
@@ -278,29 +319,29 @@ void inserir_discente() {
     cabecalho("DISCENTES > INSERIR");   
 
     // formulário
-     Discente novo;
-     ler_string("  CPF (apenas dígitos): ", novo.cpf, MAX_CPF);     
+    Discente novo;
+    ler_string("  CPF (apenas dígitos): ", novo.cpf, MAX_CPF);     
 
-     ler_string("  Nome: ", novo.nome, MAX_NOME);
-     if (strlen(novo.nome) < 3) {
-          printf("  [!] Nome muito curto.\n");
-          pausar();
-          return;
-     }
+    ler_string("  Nome: ", novo.nome, MAX_NOME);
+    if (strlen(novo.nome) < 3) {
+        printf("  [!] Nome muito curto.\n");
+        pausar();
+        return;
+    }
 
-     novo.idade = ler_inteiro("  Idade: ", 5, 120);
+    novo.idade = ler_inteiro("  Idade: ", 5, 120);
 
-     discentes[total_discentes] = novo;
-     total_discentes++;
-     salvar_discentes();
+    discentes[total_discentes] = novo;
+    total_discentes++;
+    salvar_discentes();
 
-     printf("\n  [OK] Discente cadastrado com sucesso!\n");
-     pausar();
+    printf("\n  [OK] Discente cadastrado com sucesso!\n");
+    pausar();
 }
 
 void menu_discentes() {
-     int op;
-     do {
+    int op;
+    do {
         cabecalho("DISCENTES");
         printf(" [1] Inserir\n");
         printf(" [2] Editar\n");
@@ -309,12 +350,12 @@ void menu_discentes() {
         printf(" [0] Voltar\n");
         op = ler_inteiro("     Opção: ", 0, 4);
         switch (op) {
-                case 1: inserir_discente(); break;
-                case 2: editar_discente(); break;
-                case 3: excluir_discente(); break;
-             // case 4: pesquisar_discente(); break;
-        }
-     } while (op != 0);
+            case 1: inserir_discente(); break;
+            case 2: editar_discente(); break;
+            case 3: excluir_discente(); break;
+            // case 4: pesquisar_discente(); break;
+       }
+    } while (op != 0);
 }
 
 /* ================ MENU CURSO - CRUD ============*/
@@ -328,9 +369,7 @@ void excluir_curso(){
     if(cdx < 0) {printf(" [!] Curso não existe"); pausar(); return;}
 
     int i;
-    for(i = cdx; i < total_cursos; i++) {
-        cursos[i] = cursos[i + 1];
-    }
+    for(i = cdx; i < total_cursos; i++) {cursos[i] = cursos[i + 1];}
     
     total_cursos--;
     salvar_cursos();
@@ -384,6 +423,8 @@ void menu_cursos(){
     } while (op != 0);
     
 }
+/* ================ TURMA CRUD ===================*/
+
 
 
 /* ================ MENU PRINCIPAL ===============*/
@@ -400,28 +441,24 @@ void menu_principal() {
         /* Validando numeros inteiros */
         op = ler_inteiro("     Opção: ", 0, 4);
         switch (op) {
-            case 1:
-                   menu_discentes(); break;
-            case 2:
-                   menu_cursos(); break;
-            case 3:
-                   printf("Vc esta na op3"); break;
-            case 4:
-                   printf("Vc esta na op4"); break;
-            case 0:
-                   cabecalho("ATÉ LOGO!");
-                   printf("  Sistema encerrado.\n\n"); break;
+            case 1: menu_discentes(); break;
+            case 2: menu_cursos(); break;
+            case 3: printf("Vc esta na op3"); break;
+            case 4: printf("Vc esta na op4"); break;
+            case 0: cabecalho("ATÉ LOGO!");
+                    printf("  Sistema encerrado.\n\n"); break;
         }
     } while (op != 0);
 }
 
 /* ================ MAIN ===============*/
 int main() {
-     system("chcp 65001 > nul");
-     carregar_discentes();
-     carregar_cursos();
+    system("chcp 65001 > nul");
+    carregar_discentes();
+    carregar_cursos();
+    carregar_turma();
 
-     menu_principal();
+    menu_principal();
 
-     return 0;
+    return 0;
 }
