@@ -234,38 +234,32 @@ void salvar_turma(){
 // Busca o índice do discente, caso contrário -1
 int buscar_discente_cpf(char cpf[]) {
      int i;
-     for (i = 0; i < total_discentes; i++) {
-          if (strcmp(discentes[i].cpf, cpf) == 0) {
-               return i;
-          }
-     }
+     for (i = 0; i < total_discentes; i++)
+          if (strcmp(discentes[i].cpf, cpf) == 0) return i;     
      return -1;
 }
 
 // Busca o índice do curso pelo código
-int buscar_curso_codigo(const char busca[]){
+int buscar_curso_codigo(const char codigo[]){
     int i;
-    for(i = 0; i < total_cursos; i++)    
-        if(strcmp(cursos[i].codigo, busca) == 0) return i;
+    for(i = 0; i < total_cursos; i++)
+        if(strcmp(cursos[i].codigo, codigo) == 0) return i;
     return -1;
 }
 
 // Busca o primeiro índice da turma pelo número
-int buscar_turma_numero(const int busca){
+int buscar_turma_numero(const int numero){
     int i;
-    for(i = 0; i < total_turmas; i++){
-        if(busca == turmas[i].numero) return i;}    
+    for(i = 0; i < total_turmas; i++)
+        if(turmas[i].numero == numero) return i;
     return -1;
 }
 
-// Retorna o índice da tuma onde o discente é matriculado.
-int buscar_discente_turma(const int numero, const char cpf[]){
+// Retorna o índice da turma onde o discente é matriculado.
+int buscar_turma_numero_cpf(const int numero, const char cpf[]){
     int i; // o discente está na turma? -> retorna o indice do arrays de turma
-    for(i =0; i < total_turmas; i++){
-        if(turmas[i].numero == numero && strcmp(turmas[i].cpf,cpf) == 0){
-            return i;
-        }
-    }
+    for(i =0; i < total_turmas; i++)
+        if(turmas[i].numero == numero && strcmp(turmas[i].cpf,cpf) == 0) return i;    
     return -1;
 }
 
@@ -338,6 +332,12 @@ void excluir_discente(){
         printf("\n\tOperação cancelada."); pausar(); return;
     }
 
+    /* 
+        Pra depois: 
+        Ao deletar o discente, também atualizar/excluir na lista de turmas[]
+        no qual o discente participava.
+    */
+
     for(int i = idx; i < total_discentes; i++){
         discentes[i] = discentes[i + 1];
     }
@@ -346,6 +346,23 @@ void excluir_discente(){
     
     salvar_discentes();
     printf("  [!] Discente Excluído."); pausar(); return;    
+}
+
+void pesquisar_discente(){
+    cabecalho("DISCENTES > PESQUISAR");
+
+    char cpf[MAX_CPF];
+    ler_string( "   CPF do discente: ", cpf, MAX_CPF);
+
+    int idx;
+    if( (idx = buscar_discente_cpf(cpf)) == -1){
+        printf("\n  [!] Discente não é registrado.\n"); pausar(); return;
+    }
+
+    printf("\n\t%-14s%-20s%10s", "CPF", "NOME", "IDADE");
+    printf("\n\t%-14s%-20s%10d\n", discentes[idx].cpf, discentes[idx].nome, discentes[idx].idade);
+
+    pausar();
 }
 
 void inserir_discente() {
@@ -389,22 +406,47 @@ void menu_discentes() {
             case 1: inserir_discente(); break;
             case 2: editar_discente(); break;
             case 3: excluir_discente(); break;
-            // case 4: pesquisar_discente(); break;
+            case 4: pesquisar_discente(); break;
        }
     } while (op != 0);
 }
 
 /* ================ MENU CURSO - CRUD ============*/
+void pesquisar_curso(){
+    cabecalho("CURSO > PESQUISAR");
+
+    char codigo[MAX_CURSOS];
+    ler_string("  Código do curso: ", codigo, MAX_CURSOS);
+    int ic;
+    if((ic = buscar_curso_codigo(codigo)) == -1){
+        printf("\n  [!] Curso não encontrado.\n"); pausar(); return;
+    }
+
+    Curso c = cursos[ic];
+    printf("\n\t%-14s %-26s %-10s %-10s %-10s\n", 
+                "CODIGO", "NOME", "HORA", "VAGAS", "PARTICIPANTES");
+    printf(  "\t%-14s %-26s %-10d %-10d %-10d\n", 
+                c.codigo, c.nome, c.horas, c.vagas, c.participantes);
+    pausar();
+}
+
 void excluir_curso(){
     cabecalho("   CURSO > EXCLUIR");
 
-    char cod_alvo[MAX_CODIGO];
-    ler_string("  Código: ", cod_alvo, MAX_CODIGO);
+    char codigo_procurado[MAX_CODIGO];
+    ler_string("  Código: ", codigo_procurado, MAX_CODIGO);
 
-    int cdx = buscar_curso_codigo(cod_alvo);
+    int cdx = buscar_curso_codigo(codigo_procurado);
     if(cdx < 0) {printf(" [!] Curso não existe"); pausar(); return;}
 
+    // Impedir de deletar curso caso tenha aluno matriculado no tal curso.
     int i;
+    for(i = 0; i < total_turmas; i++){
+        if(strcmp(turmas[i].codigo_curso, codigo_procurado) == 0){
+            printf( " O curso tem discente. Não pode excluir."); pausar(); return;}
+    }
+    
+    // executando a exclusão (reescrevendo no índice)
     for(i = cdx; i < total_cursos; i++) {cursos[i] = cursos[i + 1];}
     
     total_cursos--;
@@ -528,7 +570,7 @@ void editar_turma(){
     // pede o cpf do discente e verifica
     char cpf_discente[MAX_CPF];
     ler_string("\n  CPF do Discente: ", cpf_discente, MAX_CPF);
-    int it = buscar_discente_turma(n_turma, cpf_discente);
+    int it = buscar_turma_numero_cpf(n_turma, cpf_discente);
     if(it == -1){ printf("  [!] Aluno não registrado na turma."); pausar(); return;}
 
     // mostra as legendas das opcao para escolher
@@ -563,6 +605,7 @@ void excluir_turma(){
     ler_inteiro(" Número da Turma: ", 0, total_turmas);
 
     
+    puts("EM EDIÇÃO");
     pausar(); return;
 }
 
