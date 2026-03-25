@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
+#include <locale.h>
 
 /* ===================== CONSTANTES ===================== */
 #define MAX_CPF 20
@@ -16,6 +18,8 @@
 #define ARQ_DISCENTES "discentes.txt"
 #define ARQ_CURSOS "cursos.txt"
 #define ARQ_TURMAS "turmas.txt"
+
+#define MARGEM 10
 
 /* ===================== ESTRUTURAS ===================== */
 typedef struct {
@@ -41,7 +45,7 @@ typedef struct {
      int hora_participacao;
 } Turma;
 
-/* ========== ARRAY GLOBAIS ========== */
+/* ========== VARIAVEIS GLOBAIS ========== */
 Discente discentes[MAX_DISCENTES];
 int total_discentes = 0;
 
@@ -51,14 +55,22 @@ int total_cursos = 0;
 Turma turmas[MAX_TURMAS];
 int total_turmas = 0;
 
+COORD CursorPosition;
+
 /* ================= FUNCOES AUXILIARES ================= */
+void gotoxy(int x, int y){
+    CursorPosition.X = x;
+    CursorPosition.Y = y;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE),CursorPosition);
+}
+
 void limpar_buffer() {
      int c;
      while ((c = getchar()) != '\n' && c != EOF);
 }
 
 void pausar() {
-     printf("\n  Pressione ENTER para continuar...");
+     printf("\n%*sPressione ENTER para continuar...", MARGEM, "");
      limpar_buffer();
 
      getchar();
@@ -66,7 +78,8 @@ void pausar() {
 
 void cabecalho(const char titulo[]) {
      system("cls");
-     printf("   ESCOLA TOP-ART-BARE  |  %s\n", titulo);
+     gotoxy(5,0);
+     printf("ESCOLA TOP-ART-BARE  |  %s\n", titulo);
      printf("\n");
 }
 
@@ -97,7 +110,7 @@ int ler_inteiro(const char legenda[], int min, int max_val) {
     int valor; char buf[50];
 
     while (1) {
-         printf("%s", legenda);
+         printf("%*s%s", MARGEM, "", legenda);
          fgets(buf, sizeof(buf), stdin);
          if (sscanf(buf, "%d", &valor) == 1 && valor >= min && valor <= max_val) 
             return valor;
@@ -264,6 +277,7 @@ int buscar_turma_numero_cpf(const int numero, const char cpf[]){
 }
 
 /* ======================== *LISTAGEM* =================================  */
+
 void listar(){
     int i;
     for(i = 0; i < total_discentes; i++){
@@ -275,16 +289,19 @@ void listar(){
 /* ======================== MENU DISCENTE - CRUD ========================= */
 void editar_discente(){
     cabecalho(" DISCENTE > EDITAR");
-
+    gotoxy(MARGEM, 4);
     listar();
-
+    gotoxy(MARGEM, 2);
     char cpf[MAX_CPF];
     ler_string(" CPF do discente: ", cpf, MAX_CPF);
     int idx = buscar_discente_cpf(cpf);
-    if(idx < 0){printf(" Discente não existe"); pausar(); return;}    
-    
+    if(idx < 0){
+        cabecalho("DISCENTE > EDITAR");
+        printf("%*s[!] Discente não existe", MARGEM, ""); pausar(); return;}
+        
+    cabecalho(" DISCENTE > EDITAR > SELECIONAR");
     printf("\t%-15s %-40s %s\n", "[1] CPF", "[2] NOME", "[3] IDADE" );
-    printf("\t%-15s %-40s %d", discentes[idx].cpf, 
+    printf("\t%*s%-15s %-40s %d", 4, "", discentes[idx].cpf, 
                              discentes[idx].nome, 
                              discentes[idx].idade);
     
@@ -367,28 +384,27 @@ void pesquisar_discente(){
 
 void inserir_discente() {
     cabecalho("DISCENTES > INSERIR");   
-
     // formulário
-    Discente novo;
-    ler_string("  CPF (apenas dígitos): ", novo.cpf, MAX_CPF);
+    Discente novo; gotoxy(MARGEM,2);
+    ler_string("CPF (apenas dígitos): ", novo.cpf, MAX_CPF); gotoxy(MARGEM,7);
     if(buscar_discente_cpf(novo.cpf) >= 0){
-        printf(" [!] Discente já registrado!\n"); pausar(); return;
-    }
+        printf("\n%*s%s\n", MARGEM, "","[!] Discente já está registrado!"); pausar(); return;
+    } gotoxy(MARGEM, 4);
 
-    ler_string("  Nome: ", novo.nome, MAX_NOME);
+    ler_string("Nome: ", novo.nome, MAX_NOME);
     if (strlen(novo.nome) < 3) {
-        printf("  [!] Nome muito curto.\n");
+        printf("\n%*s[!] Nome muito curto.\n", MARGEM, "");
         pausar();
         return;
     }
 
-    novo.idade = ler_inteiro("  Idade: ", 5, 120);
+    novo.idade = ler_inteiro("Idade: ", 5, 120);
 
     discentes[total_discentes] = novo;
     total_discentes++;
     salvar_discentes();
 
-    printf("\n  [OK] Discente cadastrado com sucesso!\n");
+    printf("\n%*s[OK] Discente cadastrado com sucesso!\n", MARGEM, "");
     pausar();
 }
 
@@ -396,12 +412,16 @@ void menu_discentes() {
     int op;
     do {
         cabecalho("DISCENTES");
-        printf(" [1] Inserir\n");
-        printf(" [2] Editar\n");
-        printf(" [3] Excluir\n");
-        printf(" [4] Pesquisar\n");
-        printf(" [0] Voltar\n");
-        op = ler_inteiro("     Opção: ", 0, 4);
+        gotoxy(MARGEM +  0,  2); printf("[1] Inserir");
+        gotoxy(MARGEM + 20,  2); printf("[2] Editar");
+        gotoxy(MARGEM + 40,  2); printf("[3] Excluir");
+        gotoxy(MARGEM +  0,  3); printf("[4] Pesquisar");
+        gotoxy(MARGEM + 40,  3); printf("[0] Voltar");
+        gotoxy(MARGEM +  0,  5);
+        gotoxy(MARGEM + 10, 10); printf("Em desenvolvimento");
+        gotoxy(MARGEM +  0,  6);
+        
+        op = ler_inteiro("Opção: ", 0, 4);
         switch (op) {
             case 1: inserir_discente(); break;
             case 2: editar_discente(); break;
@@ -456,7 +476,11 @@ void excluir_curso(){
 }
 
 void editar_curso(){
+    cabecalho("CURSO > EDITAR");
 
+
+
+    pausar();
 }
 
 void inserir_curso(){
@@ -483,12 +507,16 @@ void menu_cursos(){
     do
     {
         cabecalho("CURSO");
-        printf(" [1] Inserir\n");
-        printf(" [2] Editar\n");
-        printf(" [3] Excluir\n");
-        printf(" [4] Pesquisar\n");
-        printf(" [0] Voltar\n");
-        op = ler_inteiro("     Opção: ", 0 , 4);
+        gotoxy(MARGEM +  0,  2); printf("[1] Inserir");
+        gotoxy(MARGEM + 20,  2); printf("[2] Editar");
+        gotoxy(MARGEM + 40,  2); printf("[3] Excluir");
+        gotoxy(MARGEM +  0,  3); printf("[4] Pesquisar");        
+        gotoxy(MARGEM + 40,  3); printf("[0] Voltar");
+        gotoxy(MARGEM +  0,  5);
+        gotoxy(MARGEM + 10, 10); printf("Em desenvolvimento");
+        gotoxy(MARGEM +  0,  6);
+        
+        op = ler_inteiro("Opção: ", 0 , 4);
         switch (op) {
         case 1: inserir_curso(); break;
         case 2: editar_curso();  break;
@@ -602,7 +630,10 @@ void editar_turma(){
 void excluir_turma(){
     cabecalho( "TURMA > EXCLUIR");
 
-    ler_inteiro(" Número da Turma: ", 0, total_turmas);
+    int numero = ler_inteiro("Número da Turma: ", 0, total_turmas);
+
+
+    
 
     
     puts("EM EDIÇÃO");
@@ -632,13 +663,16 @@ void menu_turmas(){
     int op;
     do {
         cabecalho("TURMAS");
-        printf(" [1] Inserir\n");
-        printf(" [2] Editar\n");
-        printf(" [3] Excluir\n");
-        printf(" [4] Pesquisar\n");
-        printf(" [0] Voltar\n");
-        
-        switch( op = ler_inteiro( " Opção: ", 0, 4) ){
+        gotoxy(MARGEM +  0,  2); printf("[1] Inserir");
+        gotoxy(MARGEM + 20,  2); printf("[2] Editar");
+        gotoxy(MARGEM + 40,  2); printf("[3] Excluir");
+        gotoxy(MARGEM +  0,  3); printf("[4] Pesquisar");
+        gotoxy(MARGEM + 40,  3); printf("[0] Voltar");
+        gotoxy(MARGEM +  0,  5);
+        gotoxy(MARGEM + 10, 10); printf("Em desenvolvimento");
+        gotoxy(MARGEM +  0,  6);
+
+        switch( op = ler_inteiro("Opção: ", 0, 4) ){
             case 1:  inserir_turma();  break;
             case 2:  editar_turma();   break;
             case 3:  excluir_turma();  break;
@@ -653,16 +687,18 @@ void menu_turmas(){
 /* ================ MENU PRINCIPAL ===============*/
 void menu_principal() {
     int op;
-    do {
+    do {        
         cabecalho("MENU PRINCIPAL");
-        printf(" [1] Discentes\n");
-        printf(" [2] Cursos\n");
-        printf(" [3] Turmas\n");
-        printf(" [4] Relatorio\n");
-        printf(" [0] Sair\n");
-
+        gotoxy(MARGEM +  0, 2); printf("[1] Discentes");
+        gotoxy(MARGEM + 20, 2); printf("[2] Cursos");
+        gotoxy(MARGEM + 40, 2); printf("[3] Turmas");
+        gotoxy(MARGEM +  0, 3); printf("[4] Relatório");
+        gotoxy(MARGEM + 40, 3); printf("[0] Sair");
+        gotoxy(MARGEM +  0, 5);
+        gotoxy(MARGEM + 10, 10); printf("Escolha uma das opções.");
+        gotoxy(MARGEM +  0,  6);
         /* Validando numeros inteiros */
-        op = ler_inteiro("     Opção: ", 0, 4);
+        op = ler_inteiro("OPÇÃO: ", 0, 4);
         switch (op) {
             case 1: menu_discentes(); break;
             case 2: menu_cursos(); break;
@@ -676,7 +712,7 @@ void menu_principal() {
 
 /* ================ MAIN ===============*/
 int main() {
-    system("chcp 65001 > nul");
+    setlocale(LC_ALL, "Portuguese_Brazil.UTF-8");
     carregar_discentes();
     carregar_cursos();
     carregar_turma();
