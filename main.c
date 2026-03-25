@@ -606,11 +606,12 @@ void editar_turma(){
     printf("\n  %-10s  %-10s%-10s\n", "[1] NOTA", "[2] HORA", "[3] ANO");
     printf("    %-10.2f%-10d%-10d\n", turmas[it].nota, turmas[it].hora_participacao, turmas[it].ano);
 
+    printf("%*s(Deixe em branco para manter)\n", MARGEM, "");
     char buf[5]; float fval; int ival;
     printf("\n   Nova nota: ");
     fgets(buf, sizeof(buf), stdin);
     if(sscanf(buf, "%f", &fval) == 1 && fval >= 0 && fval <= 10)
-        turmas[it].nota = fval;    
+        turmas[it].nota = fval;
     
     printf("   Nova hora: ");
     fgets(buf, sizeof(buf), stdin);
@@ -628,16 +629,32 @@ void editar_turma(){
 }
 
 void excluir_turma(){
-    cabecalho( "TURMA > EXCLUIR");
+    cabecalho("TURMA > EXCLUIR");
 
     int numero = ler_inteiro("Número da Turma: ", 0, total_turmas);
+    if(buscar_turma_numero(numero) == -1){ // verifica se o numero da turma existe.
+        printf("\n%*s[!] Turma não encontrada!", MARGEM, ""); pausar(); return;
+    }
+    int idx = buscar_turma_numero(numero);
 
+    printf("%*sExcluir turma %d de %s? (s/n): ", MARGEM, "", numero, cursos[idx].nome);
 
+    char sn[2];
+    ler_string("", sn, 2);
+    if(sn[0]!='s' && sn[0] != 'S'){
+        printf("\n%*s[!] Exclusão Cancelada.", MARGEM, "");
+    }
     
 
-    
-    puts("EM EDIÇÃO");
-    pausar(); return;
+    while(idx != -1){
+        for(int i = idx; i < total_turmas; i++){            
+                turmas[i] = turmas[i + 1];            
+        }
+        total_turmas--;
+        idx = buscar_turma_numero(numero);
+    }
+
+    salvar_turma(); pausar(); return;
 }
 
 void pesquisar_turma(){
