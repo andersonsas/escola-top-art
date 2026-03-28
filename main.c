@@ -1,18 +1,20 @@
-#include <ctype.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <windows.h>
 #include <locale.h>
+#include <windows.h>
 
 /* ===================== CONSTANTES ===================== */
+
 #define MAX_CPF 20
 #define MAX_NOME 100
 #define MAX_CODIGO 10
 
 #define MAX_DISCENTES 100
 #define MAX_CURSOS 16
-#define MAX_TURMAS 20
+#define MAX_TURMAS 100 // MAX_LOG: Máximo de registro de cadastro de alunos nas turmas
+#define MAX_SALAS 6
 #define MIN_ANO 2000
 #define MAX_ANO 2026
 
@@ -23,6 +25,7 @@
 #define MARGEM 10
 
 /* ===================== ESTRUTURAS ===================== */
+
 typedef struct {
     char cpf[MAX_CPF];
     char nome[MAX_NOME];
@@ -46,23 +49,41 @@ typedef struct {
     int hora_participacao;
 } Turma;
 
-/* ========== VARIAVEIS GLOBAIS ========== */
+/* ================== VARIAVEIS GLOBAIS ================= */
+
 Discente discentes[MAX_DISCENTES];
 int total_discentes = 0;
 
 Curso cursos[MAX_CURSOS];
 int total_cursos = 0;
 
-Turma turmas[MAX_TURMAS];
-int total_turmas = 0;
+Turma turmas[MAX_TURMAS]; // turmas_log[]
+int total_turmas = 0; // 
 
 COORD CursorPosition;
 
 /* ================= FUNCOES AUXILIARES ================= */
+
 void gotoxy(int x, int y) {
     CursorPosition.X = x;
     CursorPosition.Y = y;
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPosition);
+}
+
+/* Converte string para maisculo numa copia */
+void para_maiusculo(char *dest, const char *frase) {
+    int i;
+    for (i = 0; frase[i] != '\0'; i++)
+        dest[i] = (char)toupper((unsigned char)frase[i]);
+    dest[i] = '\0';
+}
+
+/* Verifica se 'busca' aparece dentro de 'texto' */
+int contem_palavra(const char texto[], const char busca[]) {
+    char _t[MAX_NOME], _b[MAX_NOME];
+    para_maiusculo(_t, texto);
+    para_maiusculo(_b, busca);
+    return strstr(_t, _b) != NULL;
 }
 
 void limpar_buffer() {
@@ -85,6 +106,7 @@ void cabecalho(const char titulo[]) {
 }
 
 /* =============== VALIDACOES ========================= */
+
 int cpf_valido(const char cpf[]) {
     int i;
     if (strlen(cpf) != 11) return 0;
@@ -124,12 +146,15 @@ float ler_float(const char legenda[], const float minf, const float maxf) {
     while (1) {
         printf("%s", legenda);
         fgets(buf, sizeof(buf), stdin);
-        if (sscanf(buf, "%f", &valor) == 1 && valor > minf && valor < maxf) return valor;
-        printf(" [] Valor invalido, Digite entre %.2f e %.2f.\n", minf, maxf);
+        if (sscanf(buf, "%f", &valor) == 1 && valor > minf && valor < maxf)
+            return valor;
+        printf("%*s[!] Valor invalido, Digite entre %.2f e %.2f.\n",
+            MARGEM, "", minf, maxf);
     }
 }
 
 /* ===================== DISCENTES - ARQUIVO ===================== */
+
 void carregar_discentes() {
     FILE *f = fopen(ARQ_DISCENTES, "r");
     if (!f) { printf("Error ao carregar"); pausar(); return; }
@@ -145,7 +170,9 @@ void carregar_discentes() {
 
 void salvar_discentes() {
     FILE *f = fopen(ARQ_DISCENTES, "w");
-    if (!f) { printf("  [!] Erro ao salvar discentes.\n"); return; }
+    if (!f) {
+        printf("%*s[!] Erro ao salvar discentes.\n", MARGEM, ""); return;
+    }
 
     int i;
     for (i = 0; i < total_discentes; i++)
@@ -159,7 +186,10 @@ void salvar_discentes() {
 /* ======================== CURSO - ARQUIVO ======================== */
 
 void carregar_cursos() {
-    FILE *f = fopen(ARQ_CURSOS, "r"); if (!f) return;
+    FILE *f = fopen(ARQ_CURSOS, "r");
+    if (!f) {
+        printf("%*s[!] Erro ao carregar curso.\n", MARGEM, ""); return;
+    }
 
     total_cursos = 0;
     char linha[100];
@@ -198,7 +228,9 @@ void salvar_cursos() {
     }
     fclose(f);
 }
+
 /* ======================== TURMA - ARQUIVO ========================*/
+
 void carregar_turma() {
     FILE *f = fopen(ARQ_TURMAS, "r");
     if (!f) { printf(" [!] Carregar turma falhou"); pausar(); return; }
@@ -290,6 +322,35 @@ void listar() {
 }
 
 /* ======================== MENU DISCENTE - CRUD ========================= */
+
+void inserir_discente() {
+    cabecalho("DISCENTES > INSERIR");
+
+    Discente novo;
+    ler_string("CPF (apenas dígitos): ", novo.cpf, MAX_CPF);
+
+    gotoxy(MARGEM, 7);
+    if (buscar_discente_cpf(novo.cpf) >= 0) {
+        printf("\n%*s%s\n", MARGEM, "", "[!] Discente já está registrado!");
+        pausar(); return;
+    }
+
+    ler_string("Nome: ", novo.nome, MAX_NOME);
+    if (strlen(novo.nome) < 3) {
+        printf("\n%*s[!] Nome muito curto.\n", MARGEM, "");
+        pausar(); return;
+    }
+
+    novo.idade = ler_inteiro("Idade: ", 5, 120);
+
+    discentes[total_discentes] = novo;
+    total_discentes++;
+    salvar_discentes();
+
+    printf("\n%*s[OK] Discente cadastrado com sucesso!\n", MARGEM, "");
+    pausar();
+}
+
 void editar_discente() {
     cabecalho(" DISCENTE > EDITAR");
     gotoxy(MARGEM, 2);
@@ -322,18 +383,18 @@ void editar_discente() {
         case 1:
             ler_string("Novo CPF: ", novo_cpf, MAX_CPF);
             if (buscar_discente_cpf(novo_cpf) != -1) {
-                printf("\n%*s[!] CPF já existe. ", MARGEM, ""); pausar(); return;
+                printf("\n%*s[!] CPF já existe. ", MARGEM, "");
+                pausar(); return;
             }
             strcpy(discentes[idx].cpf, novo_cpf);
 
-            // Se modificar o valor de um aluno, será necessário atualizar a turma em que ele está registrado.
+            /* Se modificar o valor de um aluno, será necessário
+            atualizar a turma em que ele está registrado. */
             for (int i = 0; i < total_turmas; i++) {
                 if (strcmp(turmas[i].cpf, cpf) == 0) {
                     strcpy(turmas[i].cpf, novo_cpf);
                 }
             }
-
-
             break;
         case 2:
             ler_string("Novo Nome: ", novo_nome, MAX_NOME);
@@ -354,27 +415,31 @@ void excluir_discente() {
     cabecalho("DISCENTE > EXCLUIR");
 
     char cpf[MAX_CPF]; // entrada do usuário
-    ler_string("  CPF do discente: ", cpf, MAX_CPF);
+    ler_string("CPF do discente: ", cpf, MAX_CPF);
 
     int idx = buscar_discente_cpf(cpf);
     if (idx < 0) { // Caso de discente não registrado
-        printf("\n  [!] Discente não está registrado.\n"); pausar(); return;
+        printf("%*s[!] Discente não está registrado.\n", MARGEM, "");
+        pausar(); return;
     }
 
     char sn[3];
-    printf("Excluir %s", discentes[idx].nome);
-    ler_string("? (s/n) : ", sn, 3);
+    printf("\n%*sExcluir \"%s\"?\n", MARGEM, "", discentes[idx].nome);
+    ler_string("(s/n) : ", sn, 3);
     if (sn[0] != 's' && sn[0] != 'S') {
-        printf("\nOperação cancelada."); pausar(); return;
+        printf("\n%*sOperação cancelada.\n", MARGEM, ""); pausar(); return;
     }
 
-
-
-
+    // O total de sala é quantidade de números distintos 
+    // no número da turma do arquivo turmas.txt
+    int contar = 0; // void get_totalSalas();
+    for (int it = 1; it < total_turmas; it++) {
+        if (buscar_turma_numero(it) != -1) contar++;
+    }
 
     // Exclui todo registro do discentes em turmas
     int i, j, x = 0, cont = 0;
-    for (i = 0; i < total_turmas; i++) {
+    for (i = 1; i <= MAX_SALAS; i++) {
         x = buscar_turma_numero_cpf(i, cpf);
         if (x == -1) continue;
 
@@ -394,7 +459,7 @@ void excluir_discente() {
 
     salvar_discentes();
     salvar_turma();
-    printf("  [!] Discente Excluído."); pausar(); return;
+    printf("\n%*s[!] Discente Excluído.", MARGEM, ""); pausar(); return;
 }
 
 void pesquisar_discente() {
@@ -409,36 +474,13 @@ void pesquisar_discente() {
     }
 
     printf("\n\t%-14s%-20s%10s", "CPF", "NOME", "IDADE");
-    printf("\n\t%-14s%-20s%10d\n", discentes[idx].cpf, discentes[idx].nome, discentes[idx].idade);
+    printf("\n\t%-14s%-20s%10d\n", discentes[idx].cpf,
+        discentes[idx].nome, discentes[idx].idade);
 
     pausar();
 }
 
-void inserir_discente() {
-    cabecalho("DISCENTES > INSERIR");
-    // formulário
-    Discente novo; gotoxy(MARGEM, 2);
-    ler_string("CPF (apenas dígitos): ", novo.cpf, MAX_CPF); gotoxy(MARGEM, 7);
-    if (buscar_discente_cpf(novo.cpf) >= 0) {
-        printf("\n%*s%s\n", MARGEM, "", "[!] Discente já está registrado!"); pausar(); return;
-    } gotoxy(MARGEM, 4);
 
-    ler_string("Nome: ", novo.nome, MAX_NOME);
-    if (strlen(novo.nome) < 3) {
-        printf("\n%*s[!] Nome muito curto.\n", MARGEM, "");
-        pausar();
-        return;
-    }
-
-    novo.idade = ler_inteiro("Idade: ", 5, 120);
-
-    discentes[total_discentes] = novo;
-    total_discentes++;
-    salvar_discentes();
-
-    printf("\n%*s[OK] Discente cadastrado com sucesso!\n", MARGEM, "");
-    pausar();
-}
 
 void menu_discentes() {
     int op;
@@ -446,14 +488,14 @@ void menu_discentes() {
         cabecalho("DISCENTES");
         gotoxy(MARGEM + 0, 2); printf("[1] Inserir");
         gotoxy(MARGEM + 20, 2); printf("[2] Editar");
-        gotoxy(MARGEM + 40, 2); printf("[3] Excluir");
-        gotoxy(MARGEM + 0, 3); printf("[4] Pesquisar");
+        gotoxy(MARGEM + 0, 3); printf("[3] Excluir");
+        gotoxy(MARGEM + 20, 3); printf("[4] Pesquisar");
         gotoxy(MARGEM + 40, 3); printf("[0] Voltar");
         gotoxy(MARGEM + 0, 5);
         gotoxy(MARGEM + 10, 10); printf("Em desenvolvimento");
         gotoxy(MARGEM + 0, 6);
 
-        op = ler_inteiro("Opção: ", 0, 4);
+        op = ler_inteiro("OPÇÃO: ", 0, 4);
         switch (op) {
             case 1: inserir_discente(); break;
             case 2: editar_discente(); break;
@@ -463,58 +505,7 @@ void menu_discentes() {
     } while (op != 0);
 }
 
-/* ================ MENU CURSO - CRUD ============*/
-void pesquisar_curso() {
-    cabecalho("CURSO > PESQUISAR");
-
-    char codigo[MAX_CURSOS];
-    ler_string("  Código do curso: ", codigo, MAX_CURSOS);
-    int ic;
-    if ((ic = buscar_curso_codigo(codigo)) == -1) {
-        printf("\n  [!] Curso não encontrado.\n"); pausar(); return;
-    }
-
-    Curso c = cursos[ic];
-    printf("\n\t%-14s %-26s %-10s %-10s %-10s\n",
-                "CODIGO", "NOME", "HORA", "VAGAS", "PARTICIPANTES");
-    printf("\t%-14s %-26s %-10d %-10d %-10d\n",
-                c.codigo, c.nome, c.horas, c.vagas, c.participantes);
-    pausar();
-}
-
-void excluir_curso() {
-    cabecalho("   CURSO > EXCLUIR");
-
-    char codigo_procurado[MAX_CODIGO];
-    ler_string("  Código: ", codigo_procurado, MAX_CODIGO);
-
-    int cdx = buscar_curso_codigo(codigo_procurado);
-    if (cdx < 0) { printf(" [!] Curso não existe"); pausar(); return; }
-
-    // Impedir de deletar curso caso tenha aluno matriculado no tal curso.
-    int i;
-    for (i = 0; i < total_turmas; i++) {
-        if (strcmp(turmas[i].codigo_curso, codigo_procurado) == 0) {
-            printf(" O curso tem discente. Não pode excluir."); pausar(); return;
-        }
-    }
-
-    // executando a exclusão (reescrevendo no índice)
-    for (i = cdx; i < total_cursos; i++) { cursos[i] = cursos[i + 1]; }
-
-    total_cursos--;
-    salvar_cursos();
-    pausar();
-
-}
-
-void editar_curso() {
-    cabecalho("CURSO > EDITAR");
-
-
-
-    pausar();
-}
+/* ================ MENU CURSO - CRUD ================== */
 
 void inserir_curso() {
     cabecalho("CURSO > INSERIR");
@@ -539,6 +530,58 @@ void inserir_curso() {
     salvar_cursos();
     printf("\n  [OK] Curso cadastrado!\n");
 
+    pausar();
+}
+
+void editar_curso() {
+    cabecalho("CURSO > EDITAR");
+
+
+
+    pausar();
+}
+
+void excluir_curso() {
+    cabecalho("   CURSO > EXCLUIR");
+
+    char codigo_procurado[MAX_CODIGO];
+    ler_string("  Código: ", codigo_procurado, MAX_CODIGO);
+
+    int cdx = buscar_curso_codigo(codigo_procurado);
+    if (cdx < 0) { printf(" [!] Curso não existe"); pausar(); return; }
+
+    int i; // Impedir de deletar curso caso tenha aluno matriculado no tal curso.
+    for (i = 0; i < total_turmas; i++) {
+        if (strcmp(turmas[i].codigo_curso, codigo_procurado) == 0) {
+            printf("%*sO curso tem discente. Não pode excluir.", MARGEM, "");
+            pausar(); return;
+        }
+    }
+
+    // executando a exclusão (reescrevendo no índice)
+    for (i = cdx; i < total_cursos; i++) { cursos[i] = cursos[i + 1]; }
+
+    total_cursos--;
+    salvar_cursos();
+    pausar();
+
+}
+
+void pesquisar_curso() {
+    cabecalho("CURSO > PESQUISAR");
+
+    char codigo[MAX_CURSOS];
+    ler_string("  Código do curso: ", codigo, MAX_CURSOS);
+    int ic;
+    if ((ic = buscar_curso_codigo(codigo)) == -1) {
+        printf("\n  [!] Curso não encontrado.\n"); pausar(); return;
+    }
+
+    Curso c = cursos[ic];
+    printf("\n\t%-14s %-26s %-10s %-10s %-10s\n",
+                "CODIGO", "NOME", "HORA", "VAGAS", "PARTICIPANTES");
+    printf("\t%-14s %-26s %-10d %-10d %-10d\n",
+                c.codigo, c.nome, c.horas, c.vagas, c.participantes);
     pausar();
 }
 
@@ -568,21 +611,21 @@ void menu_cursos() {
     } while (op != 0);
 
 }
+
 /* ================ TURMA - CRUD =================== */
 
 void inserir_turma() {
     cabecalho("INSERIR > TURMA");
 
     Turma novo;
-    novo.numero = ler_inteiro("Número da Turma: ", 0, MAX_TURMAS);
+    novo.numero = ler_inteiro("Número da Turma: ", 1, MAX_SALAS);
 
-    int i;
-    // verifica se a turma já tem um curso vinculado
+    int i; // verifica se a turma já tem um curso vinculado
     for (i = 0; i < total_turmas; i++) {
         if (turmas[i].numero == novo.numero) { // se já existe ...
             strcpy(novo.codigo_curso, turmas[i].codigo_curso);
             printf("\n%*sTurma de %s - %s\n", MARGEM, "", novo.codigo_curso,
-                            cursos[buscar_curso_codigo(novo.codigo_curso)].nome);
+                cursos[buscar_curso_codigo(novo.codigo_curso)].nome);
             i = -1; break;
         }
     }
@@ -606,7 +649,7 @@ void inserir_turma() {
         }
     }
 
-    novo.ano = ler_inteiro("Ano: ", 2000, MAX_ANO);
+    novo.ano = ler_inteiro("Ano: ", MIN_ANO, MAX_ANO);
     novo.nota = ler_inteiro("Nota: ", 0, 10);
     novo.hora_participacao = ler_inteiro("Hora de participação: ", 0, 9999);
 
@@ -620,9 +663,9 @@ void inserir_turma() {
 
 void editar_turma() {
     cabecalho("TURMA > EDITAR");
-    int n_turma = ler_inteiro("  Número da turma: ", 1, MAX_TURMAS);
+    int n_turma = ler_inteiro("Número da turma: ", 1, MAX_TURMAS);
     if (buscar_turma_numero(n_turma) == -1) { // verifica se o numero da turma existe.
-        printf("\n  [!] Turma não encontrada!"); pausar(); return;
+        printf("\n%*s[!] Turma não encontrada!", MARGEM, ""); pausar(); return;
     }
 
     int i; // visual
@@ -638,37 +681,43 @@ void editar_turma() {
         }
     }
 
-    // pede o cpf do discente e verifica
-    char cpf_discente[MAX_CPF];
-    ler_string("\n  CPF do Discente: ", cpf_discente, MAX_CPF);
+    char cpf_discente[MAX_CPF]; // pede o cpf do discente e verifica
+    ler_string("\nCPF do Discente: ", cpf_discente, MAX_CPF);
+
     int it = buscar_turma_numero_cpf(n_turma, cpf_discente);
-    if (it == -1) { printf("  [!] Aluno não registrado na turma."); pausar(); return; }
+    if (it == -1) {
+        printf("%*s[!] Aluno não registrado na turma.", MARGEM, "");
+        pausar(); return;
+    }
+    cabecalho("TURMA > EDITAR > PERFIL");
 
     // mostra as legendas das opcao para escolher
     printf("\n\t%s\n", discentes[buscar_discente_cpf(cpf_discente)].nome);
     printf("\n  %-10s  %-10s%-10s\n", "[1] NOTA", "[2] HORA", "[3] ANO");
-    printf("    %-10.2f%-10d%-10d\n", turmas[it].nota, turmas[it].hora_participacao, turmas[it].ano);
+    printf("    %-10.2f%-10d%-10d\n", turmas[it].nota,
+        turmas[it].hora_participacao, turmas[it].ano);
 
-    printf("%*s(Deixe em branco para manter)\n", MARGEM, "");
+    printf("\n%*s(Deixe em branco para manter)\n", MARGEM, "");
+
     char buf[5]; float valor_f; int valor_i;
-    printf("\n   Nova nota: ");
+    printf("\n   Nova nota: "); // solicitação
     fgets(buf, sizeof(buf), stdin);
     if (sscanf(buf, "%f", &valor_f) == 1 && valor_f >= 0 && valor_f <= 10)
-        turmas[it].nota = valor_f;
+        turmas[it].nota = valor_f; limpar_buffer();
 
-    printf("   Nova hora: ");
+    printf("   Nova hora: "); // solicitação
     fgets(buf, sizeof(buf), stdin);
     if (sscanf(buf, "%d", &valor_i) == 1 && valor_i > 0)
         turmas[it].hora_participacao = valor_i;
 
-    printf("   Novo ano [2000 - 2026]: ");
+    printf("   Novo ano [2000 - 2026]: "); // solicitação
     fgets(buf, sizeof(buf), stdin);
-    if (sscanf(buf, "%d", &valor_i) == 1 && valor_i >= MIN_ANO && valor_i <= MAX_ANO)
+    if (sscanf(buf, "%d", &valor_i) == 1 && valor_i >= MIN_ANO && valor_i <= MAX_ANO) {
         turmas[it].ano = valor_i;
+    }
 
     salvar_turma();
-    printf("  [OK]  Turma atualizada!\n");
-    pausar();
+    printf("%*s[OK]  Turma atualizada!\n", MARGEM, ""); pausar();
 }
 
 void excluir_turma() {
@@ -763,30 +812,75 @@ void menu_turmas() {
 void relat_A() {
     cabecalho("RELATORIO > A");
 
-    printf("%*srel_a fim", MARGEM, "");
-    pausar();
+    printf("%*s%-20s%-40s%-10s", MARGEM, "", "CPF", "NOME", "IDADE");
+    printf("\n%*s-----------------------------------------------------------------\n", MARGEM, "");
+
+    for (int i = 0; i < total_discentes; i++) {
+        gotoxy(MARGEM, 4 + i); printf(discentes[i].cpf);
+        gotoxy(MARGEM + 20, 4 + i); printf(discentes[i].nome);
+        gotoxy(MARGEM + 60, 4 + i); printf("%d", discentes[i].idade);
+    }
+
+    puts(""); pausar();
+}
+
+void relat_B() {
+    cabecalho("RELATORIO > B");
+    printf("%*s%-10s%-30s%-10s%-10s", MARGEM, "", "CODIGO", "NOME", "HORAS", "VAGAS");
+
+    for (int i = 0; i < total_cursos; i++) {
+        gotoxy(MARGEM, 4 + i); printf(cursos[i].codigo);
+        gotoxy(MARGEM + 10, 4 + i); printf(cursos[i].nome);
+        gotoxy(MARGEM + 40, 4 + i); printf("%d", cursos[i].horas);
+        gotoxy(MARGEM + 50, 4 + i); printf("%d", cursos[i].vagas);
+    }
+
+    puts(""); getchar();
+}
+
+void relat_C() {
+    cabecalho("RELATORIO > C");
+
+    char busca[MAX_NOME];
+    ler_string("Palavra-chave: ", busca, MAX_NOME);
+
+    printf("\n%*s%-20s%-40s%-10s", MARGEM, "", "CPF", "NOME", "IDADE");
+
+    int i, maisUM = 0; // encontrado
+    for (i = 0; i < total_discentes; i++) {
+        if (contem_palavra(discentes[i].nome, busca)) {
+            gotoxy(MARGEM, 6 + maisUM); printf(discentes[i].cpf);
+            gotoxy(MARGEM + 20, 6 + maisUM); printf(discentes[i].nome);
+            gotoxy(MARGEM + 60, 6 + maisUM); printf("%d", discentes[i].idade);
+            maisUM++;
+        }
+    }
+
+    if (maisUM == 0) printf("\n\n%*sNenhum discente encontrado com essa palavra", MARGEM, "");
+
+    puts(""); pausar();
 }
 
 void menu_relatorio() {
     char op[3];
     do {
         cabecalho("RELATÓRIOS");
-        gotoxy(MARGEM + 0, 2); printf("[a] CPF, NOME e IDADE dos discentes");
-        gotoxy(MARGEM + 0, 3); printf("[b] CÓDIGO, NOME, HORAS e VAGAS dos cursos");
-        gotoxy(MARGEM + 0, 4); printf("[c] Discentes por palavras no nome");
-        gotoxy(MARGEM + 0, 5); printf("[d] Turma, CPF, NOME e NOTA");
-        gotoxy(MARGEM + 0, 6); printf("[e] Turma, DISCENTES, NOTA e CURSO");
-        gotoxy(MARGEM + 0, 7); printf("[f] Discentes por número de turma");
-        gotoxy(MARGEM + 0, 8); printf("[g] Turmas com médias das notas");
+        gotoxy(MARGEM + 0, 2); printf("[A] CPF, NOME e IDADE dos discentes");
+        gotoxy(MARGEM + 0, 3); printf("[B] CÓDIGO, NOME, HORAS e VAGAS dos cursos");
+        gotoxy(MARGEM + 0, 4); printf("[C] Discentes por palavras no nome");
+        gotoxy(MARGEM + 0, 5); printf("[D] Turma, CPF, NOME e NOTA");
+        gotoxy(MARGEM + 0, 6); printf("[E] Turma, DISCENTES, NOTA e CURSO");
+        gotoxy(MARGEM + 0, 7); printf("[F] Discentes por número de turma");
+        gotoxy(MARGEM + 0, 8); printf("[G] Turmas com médias das notas");
         gotoxy(MARGEM + 0, 9); printf("[0] Voltar");
 
         gotoxy(MARGEM + 0, 11); printf("Escolha uma das opções.\n");
 
         ler_string("OPÇÃO: ", op, 3);
-        switch (op[0]) {
+        switch (tolower(op[0])) {
             case 'a': relat_A(); break;
-            case 'b':; break;
-            case 'c':; break;
+            case 'b': relat_B(); break;
+            case 'c': relat_C(); break;
             case 'd':; break;
                 //case '0': ; break;
         }
@@ -795,16 +889,17 @@ void menu_relatorio() {
 
 }
 
-/* ================ MENU PRINCIPAL ===============*/
+/* ================ MENU PRINCIPAL =============== */
+
 void menu_principal() {
     int op;
     do {
         cabecalho("MENU PRINCIPAL");
         gotoxy(MARGEM + 0, 2); printf("[1] Discentes");
         gotoxy(MARGEM + 20, 2); printf("[2] Cursos");
-        gotoxy(MARGEM + 40, 2); printf("[3] Turmas");
-        gotoxy(MARGEM + 0, 3); printf("[4] Relatório");
-        gotoxy(MARGEM + 40, 3); printf("[0] Sair");
+        gotoxy(MARGEM + 0, 3); printf("[3] Turmas");
+        gotoxy(MARGEM + 20, 3); printf("[4] Relatório");
+        gotoxy(MARGEM + 40, 4); printf("[0] Sair");
         gotoxy(MARGEM + 0, 5);
         gotoxy(MARGEM + 10, 10); printf("Escolha uma das opções.");
         gotoxy(MARGEM + 0, 6);
@@ -816,12 +911,13 @@ void menu_principal() {
             case 3: menu_turmas(); break;
             case 4: menu_relatorio(); break;
             case 0: cabecalho("ATÉ LOGO!");
-                printf("  Sistema encerrado.\n\n"); break;
+                printf("\n%*sSistema encerrado.\n\n", MARGEM, ""); break;
         }
     } while (op != 0);
 }
 
-/* ================ MAIN ===============*/
+/* ==================== MAIN =================== */
+
 int main() {
     system("chcp 65001>nul");
     //setlocale(LC_ALL, "Portuguese_Brazil.65001");
