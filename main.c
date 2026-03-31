@@ -108,12 +108,16 @@ void cabecalho(const char titulo[]) {
 /* =============== VALIDACOES ========================= */
 
 int cpf_valido(const char cpf[]) {
-    int i;
-    if (strlen(cpf) != 11) return 0;
+    int i, len = strlen(cpf);
+    if (len != 11 && len != 14) return 0;
 
-    for (i = 0; i < 11; i++) {
-        if (!isdigit(cpf[i])) {
-            return 0;
+    for (i = 0; i < len; i++) {
+        if (len == 14 && (i == 3 || i == 7)) {  // case1
+            if (cpf[i] != '.') return 0;
+        } else if (len == 14 && i == 11) {      //case2
+            if (cpf[i] == '-') return 0;
+        } else {                                //default
+            if (!isdigit(cpf[i])) return 0;
         }
     }
     return 1;  // Passou em todos os testes
@@ -285,7 +289,7 @@ int buscar_discente_cpf(char cpf[]) {
     return -1;
 }
 
-// Busca o índice do curso pelo código
+// Busca o índice do curso pelo código ou -1
 int buscar_curso_codigo(const char codigo[]) {
     int i;
     for (i = 0; i < total_cursos; i++)
@@ -328,6 +332,10 @@ void inserir_discente() {
 
     Discente novo;
     ler_string("CPF (apenas dígitos): ", novo.cpf, MAX_CPF);
+
+    if (!cpf_valido(novo.cpf)) {
+        printf("%*s%s", MARGEM, "", "CPF Inválido"); pausar(); return;
+    }
 
     gotoxy(MARGEM, 7);
     if (buscar_discente_cpf(novo.cpf) >= 0) {
@@ -535,10 +543,52 @@ void inserir_curso() {
 
 void editar_curso() {
     cabecalho("CURSO > EDITAR");
+    int ic; Curso curso;
+digite:
+    ler_string("Código do Curso: ", curso.codigo, MAX_CODIGO);
+    // Verificando a existência do curso
+    if ((ic = buscar_curso_codigo(curso.codigo)) == -1) {
+        printf("\n%*s[!] Curso não encontrado. [0 para voltar]", MARGEM, "");
+        if (curso.codigo[0] == '0') return;
+        gotoxy(0, 2); printf("\033[2K"); // limpa a linha no local do cursor
+        goto digite;
+    }
 
+    curso = cursos[ic]; // <- copiando da variavel global para local
+    cabecalho("CURSO > EDITAR > SELECIONAR");
+    printf("%*s%s\n\n", MARGEM, "", curso.nome); // titulando o nome do curso
 
+    // Desenha a tabela
+    printf("%*s%-10s%-30s%-10s%-10s\n", MARGEM, "", "CODIGO", "NOME", "HORAS", "VAGAS");
+    printf("%*s%-10s%-30s%-10d%-10d", MARGEM, "", curso.codigo, curso.nome, curso.horas, curso.vagas);
 
-    pausar();
+    // Editando valores
+    printf("\n\n%*sDeixe em branco para manter", MARGEM, "");
+
+    char novo[MAX_NOME]; int valor; char str[MAX_NOME];
+
+    printf("\n%*sNovo código: ", MARGEM, "");
+    fgets(novo, sizeof(novo), stdin);
+    if (sscanf(novo, "%s", str) == 1) strcpy(curso.codigo, str);
+
+    printf("%*sNovo nome: ", MARGEM, "");
+    fgets(novo, sizeof(novo), stdin);
+    if (sscanf(novo, "%32[^\n]", str) == 1) strcpy(curso.nome, str);
+
+    printf("%*sNova hora: ", MARGEM, ""); int x;
+    fgets(novo, sizeof(novo), stdin);
+    if ((x = sscanf(novo, "%d", &valor) == 1)) curso.horas = valor;
+
+    printf("%*sNova Vaga: ", MARGEM, "");
+    fgets(novo, sizeof(novo), stdin);
+    if (sscanf(novo, "%d", &valor) == 1) curso.vagas = valor;
+
+    cursos[ic] = curso;
+
+    // Salva para o arquivo
+    salvar_cursos();
+
+    puts("\n"); pausar();
 }
 
 void excluir_curso() {
@@ -591,14 +641,14 @@ void menu_cursos() {
         cabecalho("CURSO");
         gotoxy(MARGEM + 0, 2); printf("[1] Inserir");
         gotoxy(MARGEM + 20, 2); printf("[2] Editar");
-        gotoxy(MARGEM + 40, 2); printf("[3] Excluir");
-        gotoxy(MARGEM + 0, 3); printf("[4] Pesquisar");
+        gotoxy(MARGEM + 0, 3); printf("[3] Excluir");
+        gotoxy(MARGEM + 20, 3); printf("[4] Pesquisar");
         gotoxy(MARGEM + 40, 3); printf("[0] Voltar");
         gotoxy(MARGEM + 0, 5);
         gotoxy(MARGEM + 10, 10); printf("Em desenvolvimento");
         gotoxy(MARGEM + 0, 6);
 
-        op = ler_inteiro("Opção: ", 0, 4);
+        op = ler_inteiro("OPÇÃO: ", 0, 4);
         switch (op) {
             case 1: inserir_curso(); break;
             case 2: editar_curso();  break;
