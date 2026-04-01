@@ -109,13 +109,14 @@ void cabecalho(const char titulo[]) {
 
 int cpf_valido(const char cpf[]) {
     int i, len = strlen(cpf);
-    if (len != 11 && len != 14) return 0;
+    //if (len != 11 && len != 14) return 0; // O de '14' digitos desabilitado
+    if (len != 11) return 0; // Aceitar somente com 11 digitos
 
     for (i = 0; i < len; i++) {
         if (len == 14 && (i == 3 || i == 7)) {  // case1
             if (cpf[i] != '.') return 0;
         } else if (len == 14 && i == 11) {      //case2
-            if (cpf[i] == '-') return 0;
+            if (cpf[i] != '-') return 0;
         } else {                                //default
             if (!isdigit(cpf[i])) return 0;
         }
@@ -334,7 +335,7 @@ void inserir_discente() {
     ler_string("CPF (apenas dígitos): ", novo.cpf, MAX_CPF);
 
     if (!cpf_valido(novo.cpf)) {
-        printf("%*s%s", MARGEM, "", "CPF Inválido"); pausar(); return;
+        printf("\n%*s%s", MARGEM, "", "CPF Inválido"); pausar(); return;
     }
 
     gotoxy(MARGEM, 7);
@@ -368,7 +369,7 @@ void editar_discente() {
     int idx = buscar_discente_cpf(cpf);
     if (idx < 0) {
         cabecalho("DISCENTE > EDITAR");
-        printf("%*s[!] Discente não existe", MARGEM, ""); pausar(); return;
+        printf("\n%*s[!] Discente não existe", MARGEM, ""); pausar(); return;
     }
 
     cabecalho(" DISCENTE > EDITAR > SELECIONAR");
@@ -390,6 +391,11 @@ void editar_discente() {
     switch (opt) {
         case 1:
             ler_string("Novo CPF: ", novo_cpf, MAX_CPF);
+            if (!cpf_valido(novo_cpf)) {
+                printf("\n%*s[!] CPF inválido.", MARGEM, "");
+                pausar(); return;
+            }
+
             if (buscar_discente_cpf(novo_cpf) != -1) {
                 printf("\n%*s[!] CPF já existe. ", MARGEM, "");
                 pausar(); return;
@@ -416,7 +422,7 @@ void editar_discente() {
 
     if (opt != 0) salvar_discentes();
     if (opt == 1) salvar_turma();
-    pausar();
+    puts(""); pausar();
 }
 
 void excluir_discente() {
@@ -753,7 +759,7 @@ void editar_turma() {
     printf("\n   Nova nota: "); // solicitação
     fgets(buf, sizeof(buf), stdin);
     if (sscanf(buf, "%f", &valor_f) == 1 && valor_f >= 0 && valor_f <= 10)
-        turmas[it].nota = valor_f; limpar_buffer();
+        turmas[it].nota = valor_f; //limpar_buffer();
 
     printf("   Nova hora: "); // solicitação
     fgets(buf, sizeof(buf), stdin);
@@ -911,6 +917,48 @@ void relat_C() {
     puts(""); pausar();
 }
 
+void relat_D() {
+    cabecalho("RELATORIO > D");
+
+    if (total_turmas == 0) {
+        printf("[!] Nenhuma turma cadastrada."); pausar(); return;
+    }
+
+    printf("\n  %-10s %-15s %-40s %-10s", "TURMA", "CPF", "NOME", "NOTA");
+    puts("\n  ----------------------------------------------------------------------");
+
+    int i, id; // id: índice de discente
+    for (i = 0; i < total_turmas; i++) {
+        id = buscar_discente_cpf(turmas[i].cpf);
+        printf("  %-10d %-15s %-40s %10.2f \n", turmas[i].numero, turmas[i].cpf,
+                                                discentes[id].nome, turmas[i].nota);
+    }
+    puts(""); getchar();
+}
+
+void relat_E() {
+    cabecalho("RELATORIO > E");
+
+    if (total_turmas == 0) {
+        printf("[!] Nenhuma turma cadastrada."); pausar(); return;
+    }
+
+    printf("\n  %-7s %-15s %-40s %10s %6s %-6s", "TURMA", "CPF", "NOME", "NOTA", "COD", "CURSO");
+    puts("\n  ----------------------------------------------------------------------");
+
+    int i, id, ic; // id: índice de discente | ic: índice de curso
+    for (i = 0; i < total_turmas; i++) {
+        id = buscar_discente_cpf(turmas[i].cpf);
+        ic = buscar_curso_codigo(turmas[i].codigo_curso);
+        printf("  %-7d %-15s %-40s %10.2f %6s %-s \n",
+                                        turmas[i].numero, turmas[i].cpf,
+                                      discentes[id].nome, turmas[i].nota,
+                                  turmas[i].codigo_curso, cursos[ic].nome);
+
+    }
+    puts(""); getchar();
+}
+
 void menu_relatorio() {
     char op[3];
     do {
@@ -931,7 +979,8 @@ void menu_relatorio() {
             case 'a': relat_A(); break;
             case 'b': relat_B(); break;
             case 'c': relat_C(); break;
-            case 'd':; break;
+            case 'd': relat_D(); break;
+            case 'e': relat_E(); break;
                 //case '0': ; break;
         }
     } while (op[0] != '0');
