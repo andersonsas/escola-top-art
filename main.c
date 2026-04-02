@@ -26,13 +26,13 @@
 
 /* ===================== ESTRUTURAS ===================== */
 
-typedef struct {
+typedef struct _discente {
     char cpf[MAX_CPF];
     char nome[MAX_NOME];
     int idade;
 } Discente;
 
-typedef struct {
+typedef struct _curso {
     char codigo[MAX_CODIGO];
     char nome[MAX_NOME];
     int horas;
@@ -40,7 +40,7 @@ typedef struct {
     int participantes;
 } Curso;
 
-typedef struct {
+typedef struct _turma {
     int numero;
     char cpf[MAX_CPF];
     char codigo_curso[MAX_CODIGO];
@@ -91,11 +91,16 @@ void limpar_buffer() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+void limpar_buffer_v2(char str[]) {
+    int c;
+    if (strchr(str, '\n') == NULL)
+        while ((c = getchar()) != '\n' && c != EOF);
+}
+
 void pausar() {
     printf("\n%*sPressione ENTER para continuar...", MARGEM, "");
-    limpar_buffer();
-
-    getchar();
+    //limpar_buffer();
+    int x = getchar();
 }
 
 void cabecalho(const char titulo[]) {
@@ -129,7 +134,7 @@ int cpf_valido(const char cpf[]) {
 // Ler uma string estabelecendo uma legenda e um limite de leitura
 void ler_string(const char legenda[], char dest[], int max) {
     printf("%*s%s", MARGEM, "", legenda);
-    fgets(dest, max, stdin);
+    fgets(dest, max, stdin); limpar_buffer_v2(dest);
     dest[strcspn(dest, "\n")] = '\0';
 }
 
@@ -338,7 +343,7 @@ void inserir_discente() {
         printf("\n%*s%s", MARGEM, "", "CPF Inválido"); pausar(); return;
     }
 
-    gotoxy(MARGEM, 7);
+    gotoxy(0, 7);
     if (buscar_discente_cpf(novo.cpf) >= 0) {
         printf("\n%*s%s\n", MARGEM, "", "[!] Discente já está registrado!");
         pausar(); return;
@@ -484,7 +489,8 @@ void pesquisar_discente() {
 
     int idx;
     if ((idx = buscar_discente_cpf(cpf)) == -1) {
-        printf("\n  [!] Discente não é registrado.\n"); pausar(); return;
+        printf("\n%*s[!] Discente não é registrado.\n", MARGEM, "");
+        pausar(); return;
     }
 
     printf("\n\t%-14s%-20s%10s", "CPF", "NOME", "IDADE");
@@ -569,7 +575,7 @@ digite:
     printf("%*s%-10s%-30s%-10d%-10d", MARGEM, "", curso.codigo, curso.nome, curso.horas, curso.vagas);
 
     // Editando valores
-    printf("\n\n%*sDeixe em branco para manter", MARGEM, "");
+    printf("\n\n%*s( Deixe em branco para manter )\n", MARGEM, "");
 
     char novo[MAX_NOME]; int valor; char str[MAX_NOME];
 
@@ -589,10 +595,17 @@ digite:
     fgets(novo, sizeof(novo), stdin);
     if (sscanf(novo, "%d", &valor) == 1) curso.vagas = valor;
 
+    // Atualiza o codigo correspondente nas turmas
+    for (int i = 0; i < total_turmas; i++) {
+        if (strcmp(cursos[ic].codigo, turmas[i].codigo_curso) == 0) {
+            strcpy(turmas[i].codigo_curso, curso.codigo);
+        }
+    }
+
     cursos[ic] = curso;
 
-    // Salva para o arquivo
-    salvar_cursos();
+    salvar_cursos(); // Salva para o arquivo
+    salvar_turma();
 
     puts("\n"); pausar();
 }
@@ -619,6 +632,7 @@ void excluir_curso() {
 
     total_cursos--;
     salvar_cursos();
+    printf("%*s%s", MARGEM, "", "[OK] Curso removido.\n");
     pausar();
 
 }
@@ -767,7 +781,7 @@ void editar_turma() {
         turmas[it].hora_participacao = valor_i;
 
     printf("   Novo ano [2000 - 2026]: "); // solicitação
-    fgets(buf, sizeof(buf), stdin);
+    fgets(buf, sizeof(buf), stdin); limpar_buffer_v2(buf);
     if (sscanf(buf, "%d", &valor_i) == 1 && valor_i >= MIN_ANO && valor_i <= MAX_ANO) {
         turmas[it].ano = valor_i;
     }
@@ -891,7 +905,7 @@ void relat_B() {
         gotoxy(MARGEM + 50, 4 + i); printf("%d", cursos[i].vagas);
     }
 
-    puts(""); getchar();
+    puts(""); pausar();
 }
 
 void relat_C() {
@@ -933,7 +947,7 @@ void relat_D() {
         printf("  %-10d %-15s %-40s %10.2f \n", turmas[i].numero, turmas[i].cpf,
                                                 discentes[id].nome, turmas[i].nota);
     }
-    puts(""); getchar();
+    puts(""); pausar();
 }
 
 void relat_E() {
@@ -943,7 +957,8 @@ void relat_E() {
         printf("[!] Nenhuma turma cadastrada."); pausar(); return;
     }
 
-    printf("\n  %-7s %-15s %-40s %10s %6s %-6s", "TURMA", "CPF", "NOME", "NOTA", "COD", "CURSO");
+    printf("\n  %-7s %-15s %-40s %10s %6s %-6s", "TURMA", "CPF", "NOME",
+                                                  "NOTA", "COD", "CURSO");
     puts("\n  ----------------------------------------------------------------------");
 
     int i, id, ic; // id: índice de discente | ic: índice de curso
@@ -956,11 +971,41 @@ void relat_E() {
                                   turmas[i].codigo_curso, cursos[ic].nome);
 
     }
-    puts(""); getchar();
+    puts(""); pausar();
+}
+
+void relat_F() {
+    cabecalho("RELATORIO > F");
+    getchar();
+    int n_turma = ler_inteiro("Número da turma: ", 0, 99);
+
+    int i;
+    gotoxy(MARGEM, 8); // Exibe a tabela na parte inferior
+    printf("\n  %-10s %-15s %-10s %-10s %-10s %-10s",
+            "TURMA", "CPF", "CURSO", "ANO", "NOTA", "HORAS");
+    puts("\n  ----------------------------------------------------------------------");
+
+    for (i = 0; i < total_turmas; i++) {
+        if (turmas[i].numero == n_turma) {
+            printf("  %-10d %-15s %-10s %-10d %-10.2f %-10d\n",
+                turmas[i].numero, turmas[i].cpf, turmas[i].codigo_curso,
+                turmas[i].ano, turmas[i].nota, turmas[i].hora_participacao);
+        }
+    }
+
+    gotoxy(30, 2); // Exibe o nome do curso na parte superior
+    printf("-  %s", cursos[buscar_curso_codigo(turmas[n_turma].codigo_curso)].nome);
+    gotoxy(MARGEM, 4);
+    pausar();
+}
+
+void relat_G() {
+    cabecalho("RELATORIO > G");
+    pausar();
 }
 
 void menu_relatorio() {
-    char op[3];
+    char op[5];
     do {
         cabecalho("RELATÓRIOS");
         gotoxy(MARGEM + 0, 2); printf("[A] CPF, NOME e IDADE dos discentes");
@@ -974,16 +1019,19 @@ void menu_relatorio() {
 
         gotoxy(MARGEM + 0, 11); printf("Escolha uma das opções.\n");
 
-        ler_string("OPÇÃO: ", op, 3);
+        ler_string("OPÇÃO: ", op, 5);
+        if (op[0] == '0') break;
         switch (tolower(op[0])) {
             case 'a': relat_A(); break;
             case 'b': relat_B(); break;
             case 'c': relat_C(); break;
             case 'd': relat_D(); break;
             case 'e': relat_E(); break;
-                //case '0': ; break;
+            case 'f': relat_F(); break;
+            case 'g': relat_G(); break;
+            default: printf("\n%*s[!] Inválido!", MARGEM, ""); pausar();
         }
-    } while (op[0] != '0');
+    } while (1);
 
 
 }
