@@ -14,7 +14,7 @@
 #define MAX_DISCENTES 100
 #define MAX_CURSOS 16
 #define MAX_TURMAS 100 // MAX_LOG: Máximo de registro de cadastro de alunos nas turmas
-#define MAX_SALAS 6
+#define MAX_SALAS 10
 #define MIN_ANO 2000
 #define MAX_ANO 2026
 
@@ -763,8 +763,8 @@ void editar_turma() {
 
     // mostra as legendas das opcao para escolher
     printf("\n\t%s\n", discentes[buscar_discente_cpf(cpf_discente)].nome);
-    printf("\n  %-10s  %-10s%-10s\n", "[1] NOTA", "[2] HORA", "[3] ANO");
-    printf("    %-10.2f%-10d%-10d\n", turmas[it].nota,
+    printf("\n  %-10s%-10s%-10s\n", "NOTA", "HORA", "ANO");
+    printf("  %-10.2f%-10d%-10d\n", turmas[it].nota,
         turmas[it].hora_participacao, turmas[it].ano);
 
     printf("\n%*s(Deixe em branco para manter)\n", MARGEM, "");
@@ -976,7 +976,7 @@ void relat_E() {
 
 void relat_F() {
     cabecalho("RELATORIO > F");
-    getchar();
+
     int n_turma = ler_inteiro("Número da turma: ", 0, 99);
 
     int i;
@@ -985,22 +985,49 @@ void relat_F() {
             "TURMA", "CPF", "CURSO", "ANO", "NOTA", "HORAS");
     puts("\n  ----------------------------------------------------------------------");
 
-    for (i = 0; i < total_turmas; i++) {
-        if (turmas[i].numero == n_turma) {
-            printf("  %-10d %-15s %-10s %-10d %-10.2f %-10d\n",
-                turmas[i].numero, turmas[i].cpf, turmas[i].codigo_curso,
-                turmas[i].ano, turmas[i].nota, turmas[i].hora_participacao);
+    if (buscar_turma_numero(n_turma) != -1) {
+        for (i = 0; i < total_turmas; i++) {
+            if (turmas[i].numero == n_turma) {
+                printf("  %-10d %-15s %-10s %-10d %-10.2f %-10d\n",
+                    turmas[i].numero, turmas[i].cpf, turmas[i].codigo_curso,
+                    turmas[i].ano, turmas[i].nota, turmas[i].hora_participacao);
+            }
         }
-    }
 
-    gotoxy(30, 2); // Exibe o nome do curso na parte superior
-    printf("-  %s", cursos[buscar_curso_codigo(turmas[n_turma].codigo_curso)].nome);
-    gotoxy(MARGEM, 4);
+        gotoxy(30, 2); // Exibe o nome do curso na parte superior
+        printf("-  %s", cursos[buscar_curso_codigo(turmas[n_turma].codigo_curso)].nome);
+        gotoxy(MARGEM, 4);
+    }
     pausar();
 }
 
 void relat_G() {
     cabecalho("RELATORIO > G");
+    // nº da turma | Qtd de Alunos | Soma | Média
+    int n_turma = 1, it, i;
+    int qtd_aluno[MAX_SALAS] = {}; // qtd de aluno por sala (índice = sala)
+    float somatorio_nota[MAX_SALAS] = {};
+
+    while (n_turma <= MAX_SALAS) {
+        // verifica se turma existe
+        if ((it = buscar_turma_numero(n_turma)) == -1) {
+            n_turma++; continue;
+        }
+        // procurando correspondente no array de turmas
+        for (i = it; i < total_turmas; i++) {
+            if (turmas[i].numero == n_turma) {
+                qtd_aluno[n_turma]++;
+                somatorio_nota[n_turma] += turmas[i].nota;
+            }
+        }
+        n_turma++;
+    }
+
+    for (i = 1; i <= MAX_SALAS; i++) {
+        if (qtd_aluno[i] == 0) continue;
+        printf("\n%d|%d|%.2f|%.2f", i, qtd_aluno[i], somatorio_nota[i], somatorio_nota[i] / qtd_aluno[i]);
+    }
+
     pausar();
 }
 
