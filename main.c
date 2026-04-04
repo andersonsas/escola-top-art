@@ -97,6 +97,13 @@ void limpar_buffer_v2(char str[]) {
         while ((c = getchar()) != '\n' && c != EOF);
 }
 
+void linha_separadora(const int n, const char c[]) {
+    int i;
+    for (i = 0; i < n; i++) {
+        printf("%s", c);
+    }
+}
+
 void pausar() {
     printf("\n%*sPressione ENTER para continuar...", MARGEM, "");
     //limpar_buffer();
@@ -720,7 +727,7 @@ void inserir_turma() {
     }
 
     novo.ano = ler_inteiro("Ano: ", MIN_ANO, MAX_ANO);
-    novo.nota = ler_inteiro("Nota: ", 0, 10);
+    novo.nota = ler_float("Nota: ", 0, 10);
     novo.hora_participacao = ler_inteiro("Hora de participação: ", 0, 9999);
 
     turmas[total_turmas] = novo; total_turmas++;
@@ -756,7 +763,7 @@ void editar_turma() {
 
     int it = buscar_turma_numero_cpf(n_turma, cpf_discente);
     if (it == -1) {
-        printf("%*s[!] Aluno não registrado na turma.", MARGEM, "");
+        printf("%*s[!] Aluno não está matriculado na turma.", MARGEM, "");
         pausar(); return;
     }
     cabecalho("TURMA > EDITAR > PERFIL");
@@ -800,30 +807,56 @@ void excluir_turma() {
 
     int itx = buscar_turma_numero(numero);
 
-    int i, contador = 0; // conta os matriculados
+    int i, contador = 0; // conta os matriculados    
+
+    char cpf_discente[MAX_CPF]; // pede o cpf do discente e verifica
+    ler_string("CPF do Discente: ", cpf_discente, MAX_CPF);
+
+    char sn[5];
+    int it = buscar_turma_numero_cpf(numero, cpf_discente);
+    if (it == -1) {
+        printf("%*s[!] Aluno não está matriculado na turma.", MARGEM, "");
+        pausar();
+    } else {
+        printf("\n%*sRemover %s da turma?\n", MARGEM, "",
+            discentes[buscar_discente_cpf(cpf_discente)].nome);
+
+        ler_string("(S/N): ", sn, 2);
+        if (sn[0] != 's' && sn[0] != 'S') {
+            printf("\n%*s[!] Exclusão Cancelada.", MARGEM, "");
+            pausar();
+        } else {
+            for (i = it; i < total_turmas; i++) {
+                turmas[i] = turmas[i + 1];
+            }
+            total_turmas--;
+            salvar_turma();
+        }
+    }
+
     for (i = 0; i < total_turmas; i++) {
         if (turmas[i].numero == numero) contador++;
     }
 
     printf("\n%*sTurma tem %d discente(s) matriculado(s)\n", MARGEM, "", contador);
-    printf("%*sExcluir turma %d de %s? (s/n): ", MARGEM, "", numero, cursos[itx].nome);
+    printf("%*sExcluir turma %d de %s?\n", MARGEM, "", numero,
+        cursos[buscar_curso_codigo(turmas[itx].codigo_curso)].nome);
 
-    char sn[2];
-    ler_string("", sn, 2);
+    ler_string("(S/N): ", sn, 2);
     if (sn[0] != 's' && sn[0] != 'S') {
-        printf("\n%*s[!] Exclusão Cancelada.", MARGEM, ""); pausar(); return;
-    }
-
-    // Exclui todos discente da turma a ser removida.
-    while (itx != -1) {
-        for (int i = itx; i < total_turmas; i++) {
-            turmas[i] = turmas[i + 1];
+        printf("\n%*s[!] Exclusão Cancelada.", MARGEM, "");
+    } else {
+        // Exclui todos discente da turma a ser removida.
+        while (itx != -1) {
+            for (i = itx; i < total_turmas; i++) {
+                turmas[i] = turmas[i + 1];
+            }
+            total_turmas--;
+            itx = buscar_turma_numero(numero);
         }
-        total_turmas--;
-        itx = buscar_turma_numero(numero);
+        salvar_turma();
     }
-
-    salvar_turma(); pausar(); return;
+    pausar();
 }
 
 void pesquisar_turma() {
@@ -1023,11 +1056,18 @@ void relat_G() {
         n_turma++;
     }
 
+    gotoxy(MARGEM, 4); linha_separadora(50, "\xE2\x94\x80"); //alt+196
+    printf("\n%*s%-10s%-10s%-10s%-10s\n", MARGEM, "", "TURMA", "ALUNOS", "SOMA", "MÉDIA");
+    gotoxy(MARGEM, 6); linha_separadora(50, "─"); // Alt+196
+
     for (i = 1; i <= MAX_SALAS; i++) {
         if (qtd_aluno[i] == 0) continue;
-        printf("\n%d|%d|%.2f|%.2f", i, qtd_aluno[i], somatorio_nota[i], somatorio_nota[i] / qtd_aluno[i]);
+        printf("\n%*s%3d%10d%12.2f%10.2f", MARGEM, "",
+            i, qtd_aluno[i], somatorio_nota[i], somatorio_nota[i] / qtd_aluno[i]);
     }
 
+    gotoxy(4, 1);
+    linha_separadora(56, "═");
     pausar();
 }
 
@@ -1093,8 +1133,8 @@ void menu_principal() {
 /* ==================== MAIN =================== */
 
 int main() {
-    system("chcp 65001>nul");
-    //setlocale(LC_ALL, "Portuguese_Brazil.65001");
+    //system("chcp 65001>nul");
+    setlocale(LC_ALL, "Portuguese_Brazil.65001");
     //setlocale(LC_ALL, "Portuguese");
     carregar_discentes();
     carregar_cursos();
