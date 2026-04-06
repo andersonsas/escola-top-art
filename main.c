@@ -694,7 +694,7 @@ void menu_cursos() {
 void inserir_turma() {
     cabecalho("INSERIR > TURMA");
 
-    Turma novo;
+    Turma novo; int vaga;
     novo.numero = ler_inteiro("N£mero da Turma: ", 1, MAX_SALAS);
 
     int i; // verifica se a turma j  tem um curso vinculado
@@ -703,15 +703,31 @@ void inserir_turma() {
             strcpy(novo.codigo_curso, turmas[i].codigo_curso);
             printf("\n%*sTurma de %s - %s\n", MARGEM, "", novo.codigo_curso,
                 cursos[buscar_curso_codigo(novo.codigo_curso)].nome);
+
+            vaga = cursos[buscar_curso_codigo(novo.codigo_curso)].vagas;
             i = -1; break;
         }
     }
+
+    int cont_aluno = 0;
+    for (int k = 1; k < total_turmas; k++) {
+        if (turmas[k].numero == novo.numero) cont_aluno++;
+    }
+    if (cont_aluno >= vaga) {
+        printf("\n%*s%s\n", MARGEM, "", "[!] NÆo tem vaga");
+        pausar(); return;
+    }
+
 
     // se nÆo h , entÆo insere um c¢digo de curso na nova turma/sala
     if (i != -1) ler_string("C¢digo do curso: ", novo.codigo_curso, MAX_CODIGO);
     if (buscar_curso_codigo(novo.codigo_curso) == -1) {
         printf("%*s[!] Curso nÆo registrado.", MARGEM, ""); pausar(); return;
     }
+
+    // quantos alunos j  tem na turma?
+    // contar os alunos da turma
+
 
     ler_string("CPF: ", novo.cpf, MAX_CPF);
     if (buscar_discente_cpf(novo.cpf) == -1) {
@@ -862,7 +878,7 @@ void excluir_turma() {
 void pesquisar_turma() {
     cabecalho("TURMA > PESQUISAR");
 
-    int n_turma = ler_inteiro("N£mero da turma: ", 0, 99);
+    int n_turma = ler_inteiro("N£mero da turma: ", 1, MAX_SALAS);
 
     int i, it;
     gotoxy(MARGEM, 8); // Exibe a tabela na parte inferior
@@ -1032,13 +1048,13 @@ void relat_F() {
 
     int n_turma = ler_inteiro("N£mero da turma: ", 0, 99);
 
-    int i;
+    int i, it;
     gotoxy(MARGEM, 8); // Exibe a tabela na parte inferior
     printf("\n  %-10s %-15s %-10s %-10s %-10s %-10s",
             "TURMA", "CPF", "CURSO", "ANO", "NOTA", "HORAS");
     puts("\n  ----------------------------------------------------------------------");
 
-    if (buscar_turma_numero(n_turma) != -1) {
+    if (buscar_turma_numero(n_turma) != -1) { // Imprime se o n§ da turma desejada existir
         for (i = 0; i < total_turmas; i++) {
             if (turmas[i].numero == n_turma) {
                 printf("  %-10d %-15s %-10s %-10d %-10.2f %-10d\n",
@@ -1048,7 +1064,8 @@ void relat_F() {
         }
 
         gotoxy(26, 2); // Exibe o nome do curso na parte superior
-        printf("-  %s", cursos[buscar_curso_codigo(turmas[n_turma].codigo_curso)].nome);
+        it = buscar_turma_numero(n_turma);
+        printf("-  %s", cursos[buscar_curso_codigo(turmas[it].codigo_curso)].nome);
         gotoxy(MARGEM, 4);
     }
     pausar();
