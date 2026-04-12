@@ -105,9 +105,11 @@ void linha_separadora(const int n, const char c[]) {
 }
 
 void pausar() {
-    printf("\n%*sPressione ENTER para continuar...", MARGEM, "");
+    //printf("\n%*sPressione ENTER para continuar...", MARGEM, "");
     //limpar_buffer();
-    int x = getchar();
+    //int x = getchar();
+    printf("\n%*s", MARGEM, "");
+    system("pause");
 }
 
 void cabecalho(const char titulo[]) {
@@ -592,7 +594,11 @@ digite:
 
     printf("\n%*sNovo c¢digo: ", MARGEM, "");
     fgets(novo, sizeof(novo), stdin);
-    if (sscanf(novo, "%s", str) == 1) strcpy(curso.codigo, str);
+
+    if (sscanf(novo, "%s", str) == 1 && buscar_curso_codigo(str) != -1) {
+        printf("%*s[!] C¢digo Existente", MARGEM, ""); pausar(); return;
+    }
+    strcpy(curso.codigo, str);
 
     printf("%*sNovo nome: ", MARGEM, "");
     fgets(novo, sizeof(novo), stdin);
