@@ -400,7 +400,7 @@ void editar_discente() {
         printf("\n%*s[!] Discente n∆o existe", MARGEM, ""); pausar(); return;
     }
 
-    cabecalho(" DISCENTE > EDITAR > SELECIONAR");
+    cabecalho("DISCENTE > EDITAR > SELECIONAR");
 
     gotoxy(MARGEM + 00, 2); printf("[1] CPF");
     gotoxy(MARGEM + 20, 2); printf("[2] NOME");
@@ -560,7 +560,6 @@ void inserir_curso() {
     }
 
     Curso novo;
-    novo.participantes = 0;
 
     ler_string("C¢digo: ", novo.codigo, MAX_CODIGO);
     if (buscar_curso_codigo(novo.codigo) != -1) {
@@ -569,9 +568,9 @@ void inserir_curso() {
     }
 
     ler_string("Nome: ", novo.nome, MAX_NOME);
-
-    novo.horas = ler_inteiro("Horas: ", 1, 9999);
-    novo.vagas = ler_inteiro("Vagas: ", 1, 60);
+    novo.horas = ler_inteiro("Horas: ", 1, MAX_NOME);
+    novo.vagas = ler_inteiro("Vagas: ", 1, 100);
+    novo.participantes = 0;
 
     cursos[total_cursos] = novo;
     total_cursos++;
@@ -687,7 +686,16 @@ void pesquisar_curso() {
                 "CODIGO", "NOME", "HORA", "VAGAS", "PARTICIPANTES");
     printf("\t%-14s %-26s %-10d %-10d %-10d\n",
                 c.codigo, c.nome, c.horas, c.vagas, c.participantes);
-    pausar();
+
+    int salas[MAX_SALAS] = {};
+    printf("\n%*sTurmas / Salas: ", MARGEM, "");
+    for (int i = 0; i < total_turmas; i++) {
+        if (strcmp(turmas[i].codigo_curso, c.codigo) == 0) {
+            if (++salas[turmas[i].numero] == 1)
+                printf(" %d ", turmas[i].numero);
+        }
+    }
+    puts(""); pausar();
 }
 
 void menu_cursos() {
@@ -722,48 +730,44 @@ void menu_cursos() {
 void inserir_turma() {
     cabecalho("INSERIR > TURMA");
 
-    Turma novo; int vaga;
+    Turma novo; int vaga; Curso curso;
     novo.numero = ler_inteiro("N£mero da Turma: ", 1, MAX_SALAS);
 
-    int i; // verifica se a turma j† tem um curso vinculado
-    for (i = 0; i < total_turmas; i++) {
-        if (turmas[i].numero == novo.numero) { // se j† existe ...
-            strcpy(novo.codigo_curso, turmas[i].codigo_curso); // passa a informacao pro novo
-            printf("\n%*sTurma de %s - %s\n", MARGEM, "", novo.codigo_curso,
-                cursos[buscar_curso_codigo(novo.codigo_curso)].nome); //imprime turma e nome do curso 
+    int i, it; // verifica se a turma j† tem um curso vinculado
 
-            vaga = cursos[buscar_curso_codigo(novo.codigo_curso)].vagas; // ver vaga nominal
-            if (contar_discente_turma(novo.numero) >= vaga) { // conta alunos e compara com vaga nominal
-                printf("\n%*s%s\n", MARGEM, "", "[!] N∆o tem vaga");
-                pausar(); return;
-            }
-            i = -1; break;
+    if ((it = buscar_turma_numero(novo.numero)) != -1) {
+        curso = cursos[buscar_curso_codigo(turmas[it].codigo_curso)];
+        strcpy(novo.codigo_curso, curso.codigo);
+        printf("\n%*sTurma de %s - %s\n", MARGEM, "", curso.codigo, curso.nome); //imprime turma e nome do curso 
+
+        if (contar_discente_turma(novo.numero) >= curso.vagas) { // conta alunos e compara com vaga nominal
+            printf("\n%*s%s\n", MARGEM, "", "[!] N∆o tem vaga"); pausar(); return;
         }
     }
 
     // se n∆o h†, ent∆o insere um c¢digo de curso na nova turma/sala
-    if (i != -1) ler_string("C¢digo do curso: ", novo.codigo_curso, MAX_CODIGO);
-    if (buscar_curso_codigo(novo.codigo_curso) == -1) {
-        printf("%*s[!] Curso n∆o registrado.", MARGEM, ""); pausar(); return;
-    }
+    if (strcmp(curso.codigo, "\0") == 0) {
+        ler_string("C¢digo do curso: ", novo.codigo_curso, MAX_CODIGO);
 
-    vaga = cursos[buscar_curso_codigo(novo.codigo_curso)].vagas;
-    if (contar_discente_turma(novo.numero) >= vaga) {
-        printf("\n%*s%s\n", MARGEM, "", "[!] N∆o tem vaga");
-        pausar(); return;
+        if (buscar_curso_codigo(novo.codigo_curso) == -1) { // O curso existe?
+            printf("%*s[!] Curso n∆o registrado.", MARGEM, ""); pausar(); return;
+        }
+
+        if (contar_discente_turma(novo.numero) >= curso.vagas) { // Tem vaga?
+            printf("\n%*s%s\n", MARGEM, "", "[!] N∆o tem vaga"); pausar(); return;
+        }
     }
 
     ler_string("CPF: ", novo.cpf, MAX_CPF);
+
     if (buscar_discente_cpf(novo.cpf) == -1) {
-        printf("%*s[!] Discente n∆o est† registrado na escola.", MARGEM, "");
+        printf("\n%*s[!] Discente n∆o est† registrado na escola.\n", MARGEM, "");
         pausar(); return;
     }
 
-    for (i = 0; i < total_turmas; i++) {
-        if (turmas[i].numero == novo.numero && strcmp(turmas[i].cpf, novo.cpf) == 0) {
-            printf("%*s[!] Discente j† est† matriculado na turma.", MARGEM, "");
-            pausar(); return;
-        }
+    if (buscar_turma_numero_cpf(novo.numero, novo.cpf) != -1) {
+        printf("\n%*s[!] Discente j† est† matriculado na turma.\n", MARGEM, "");
+        pausar(); return;
     }
 
     novo.ano = ler_inteiro("Ano: ", MIN_ANO, MAX_ANO);
@@ -774,7 +778,7 @@ void inserir_turma() {
     ++cursos[buscar_curso_codigo(novo.codigo_curso)].participantes;
 
     salvar_turma(); salvar_cursos();
-    printf("%*s[OK] Turma criada e/ou discente adicionado na turma!", MARGEM, "");
+    printf("\n%*s[OK] Turma criada e/ou discente adicionado na turma!\n", MARGEM, "");
     pausar();
 }
 
@@ -864,8 +868,7 @@ void excluir_turma() {
 
         ler_string("(S/N): ", sn, 2);
         if (sn[0] != 's' && sn[0] != 'S') {
-            printf("\n%*s[!] Exclus∆o Cancelada.", MARGEM, "");
-            pausar();
+            printf("\n%*s[!] Exclus∆o Cancelada.", MARGEM, ""); pausar();
         } else {
             --cursos[buscar_curso_codigo(turmas[itx].codigo_curso)].participantes;
             for (i = it; i < total_turmas; i++) {
@@ -912,7 +915,7 @@ void pesquisar_turma() {
     gotoxy(MARGEM, 8); // Exibe a tabela na parte inferior
     printf("\n  %-10s %-15s %-10s %-10s %-10s %-10s",
             "TURMA", "CPF", "CURSO", "ANO", "NOTA", "HORAS");
-    puts("\n  ----------------------------------------------------------------------");
+    puts(""); linha_separadora(70, "ƒ"); puts(""); // alt+196
 
     for (i = 0; i < total_turmas; i++) {
         if (turmas[i].numero == n_turma) {
