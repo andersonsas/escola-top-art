@@ -130,10 +130,21 @@ void cabecalho(const char titulo[]) {
 
 /* =============== VALIDACOES ========================= */
 
-int cpf_valido(const char cpf[]) {
+void formatarCPF(char cpf[]) {
+    int i = 0, j = 0;
+    while (cpf[i]) {
+        if (isdigit(cpf[i])) {
+            cpf[j++] = cpf[i];
+        }
+        i++;
+    }
+    cpf[j] = '\0';
+}
+
+int cpf_valido(char cpf[]) {
     int i, len = strlen(cpf);
-    //if (len != 11 && len != 14) return 0; // O de '14' digitos desabilitado
-    if (len != 11) return 0; // Aceitar somente com 11 digitos
+    if (len != 11 && len != 14) return 0; // O de '14' digitos desabilitado
+    //if (len != 11) return 0; // Aceitar somente com 11 digitos
 
     for (i = 0; i < len; i++) {
         if (len == 14 && (i == 3 || i == 7)) {  // case1
@@ -144,6 +155,7 @@ int cpf_valido(const char cpf[]) {
             if (!isdigit(cpf[i])) return 0;
         }
     }
+    if (len == 14) formatarCPF(cpf);
     return 1;  // Passou em todos os testes
 }
 
@@ -400,6 +412,10 @@ void editar_discente() {
     char cpf[MAX_CPF]; int idx;
     ler_string("CPF do discente: ", cpf, MAX_CPF);
 
+    if (!cpf_valido(cpf)) {
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
+
     if (!discente_existe(cpf, &idx)) {
         cabecalho("DISCENTE > EDITAR");
         printf("\n%*s[!] Discente n∆o existe", MARGEM, ""); pausar(); return;
@@ -463,6 +479,10 @@ void excluir_discente() {
     char cpf[MAX_CPF]; // entrada do usu†rio
     ler_string("CPF do discente: ", cpf, MAX_CPF);
 
+    if (!cpf_valido(cpf)) {
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
+
     int idx;
     if (!discente_existe(cpf, &idx)) { // Caso de discente n∆o registrado
         printf("%*s[!] Discente n∆o est† registrado.\n", MARGEM, "");
@@ -506,6 +526,10 @@ void pesquisar_discente() {
 
     char cpf[MAX_CPF];
     ler_string("CPF do discente: ", cpf, MAX_CPF);
+
+    if (!cpf_valido(cpf)) {
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
 
     int idx;
     if ((!discente_existe(cpf, &idx))) {
@@ -767,6 +791,10 @@ void inserir_turma() {
 
     ler_string("CPF: ", novo.cpf, MAX_CPF);
 
+    if (!cpf_valido(novo.cpf)) {
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
+
     if (!discente_existe(novo.cpf, NULL)) {
         printf("\n%*s[!] Discente n∆o est† registrado na escola.\n", MARGEM, "");
         pausar(); return;
@@ -813,6 +841,10 @@ void editar_turma() {
 
     char cpf_discente[MAX_CPF]; // pede o cpf do discente e verifica
     puts(""); ler_string("CPF do Discente: ", cpf_discente, MAX_CPF);
+
+    if (!cpf_valido(cpf_discente)) {
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
 
     int it = buscar_turma_numero_cpf(n_turma, cpf_discente);
     if (it == -1) {
@@ -867,6 +899,10 @@ void excluir_turma() {
 
     char cpf_discente[MAX_CPF]; // pede o cpf do discente e verifica
     ler_string("CPF do Discente: ", cpf_discente, MAX_CPF);
+
+    if(!cpf_valido(cpf_discente)){
+        printf("\n%*s%s", MARGEM, "", "CPF Inv†lido"); pausar(); return;
+    }
 
     char sn[5];
     int it = buscar_turma_numero_cpf(numero, cpf_discente);
@@ -948,7 +984,7 @@ void pesquisar_turma() {
         curso_existe(turmas[it].codigo_curso, &ic);
         printf("-  %s", cursos[ic].nome);
     }
-    
+
     gotoxy(MARGEM, 4);
     pausar();
 }
