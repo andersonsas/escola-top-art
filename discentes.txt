@@ -1,0 +1,21 @@
+12345678910|Claude Monet|41
+12345678902|Albert Einstein|21
+12345678904|Michelangelo Buonarroti|42
+12345678903|Leonardo da Vinci|25
+12345678907|Rembrandt Van Rijn|37
+12345678906|Ada Lovelace|40
+12345678901|Anderson da Silva de Abreu Silva|25
+12345678905|Charles Babbage|67
+12345678908|Alan Turing|31
+12345678909|Konrad Suze|46
+12345678911|Jack Kilby|55
+12345678912|Vicent Van Gogh|71
+12345678914|Karen Sparck Jones|33
+12345678913|Pablo Picasso|20
+12345678915|Salvador Dal¡|19
+12345678917|Johann Sebastian Bach|34
+12345678919|Charles Chaplin|32
+12345678918|Ludwig Van Beethoven|26
+12345678916|Marcel Duchamp|32
+12345678920|Clara Schumann|28
+12312312300|D‚bora Santos|19

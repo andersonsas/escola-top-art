@@ -756,10 +756,10 @@ void menu_cursos() {
 void inserir_turma() {
     cabecalho("INSERIR > TURMA");
 
-    Turma novo; int vaga; Curso curso = {};
+    Turma novo; Curso curso = {};
     novo.numero = ler_inteiro("N£mero da Turma: ", 1, MAX_SALAS);
 
-    int i, it, ic;
+    int it, ic;
     // verifica se a turma j  tem um curso vinculado
 
     if ((it = buscar_turma_numero(novo.numero)) != -1) {
@@ -900,7 +900,7 @@ void excluir_turma() {
     char cpf_discente[MAX_CPF]; // pede o cpf do discente e verifica
     ler_string("CPF do Discente: ", cpf_discente, MAX_CPF);
 
-    if(!cpf_valido(cpf_discente)){
+    if (!cpf_valido(cpf_discente)) {
         printf("\n%*s%s", MARGEM, "", "CPF Inv lido"); pausar(); return;
     }
 
@@ -1163,7 +1163,7 @@ void relat_G() {
     cabecalho("RELATORIO > G");
 
     int n_turma = 1, it, i;
-    int qtd_aluno[MAX_SALAS] = {}; // qtd de aluno por sala (¡ndice = sala)
+    int qtd_aluno[MAX_SALAS + 1] = {}; // qtd de aluno por sala (¡ndice = sala)
     float somatorio_nota[MAX_SALAS] = {};
 
     while (n_turma <= MAX_SALAS) {

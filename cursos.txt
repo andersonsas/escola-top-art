@@ -1,0 +1,10 @@
+c01|M£sica|4500|10|4
+c02|Artes Cˆnicas|4500|30|0
+c03|Pintura|4200|30|0
+c04|Escultura|3200|50|0
+c05|Arquitetura|4000|20|8
+c06|Literatura|4000|40|4
+c07|Cinema|3000|20|0
+c08|Fotografia|3800|9|2
+c09|Futebol Arte|180|10|7
+c10|Arte Digital|30|5|0
