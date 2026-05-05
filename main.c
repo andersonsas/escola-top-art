@@ -114,7 +114,7 @@ void linha_separadora(const int n, const char c[]) {
 // Conta quantos discentes tem em uma turma
 int contar_discente_turma(const int numero) {
     int cont_aluno = 0;
-    for (int k = 1; k < total_turmas; k++) {
+    for (int k = 0; k < total_turmas; k++) {
         if (turmas[k].numero == numero) cont_aluno++;
     }
     return cont_aluno;
@@ -508,15 +508,16 @@ void excluir_discente() {
     }
 
     // Exclui todo registro do discentes em turmas
-    int i, j, x = 0, cont = 0;
+    int i, j, ic, x = 0, cont = 0;
     for (i = 1; i <= MAX_SALAS; i++) {
         x = buscar_turma_numero_cpf(i, cpf);
         if (x == -1) continue;
 
+        curso_existe(turmas[x].codigo_curso, &ic);
         for (j = x; j < total_turmas; j++) {
             turmas[j] = turmas[j + 1];
         }
-        cont++;
+        cont++; cursos[ic].participantes--;
     }
 
     // Rearranjando
@@ -528,7 +529,7 @@ void excluir_discente() {
     total_discentes--;
 
     salvar_discentes();
-    salvar_turma();
+    salvar_turma(); salvar_cursos();
     printf("\n%*s[!] Discente Exclu°do.", MARGEM, ""); pausar(); return;
 }
 
@@ -611,7 +612,7 @@ void inserir_curso() {
     }
 
     ler_string("Nome: ", novo.nome, MAX_NOME);
-    novo.horas = ler_inteiro("Horas: ", 1, MAX_NOME);
+    novo.horas = ler_inteiro("Horas: ", 1, 1000);
     novo.vagas = ler_inteiro("Vagas: ", 1, 100);
     novo.participantes = 0;
 
@@ -718,11 +719,10 @@ void excluir_curso() {
     salvar_cursos();
     printf("%*s%s", MARGEM, "", "[OK] Curso removido.\n");
     pausar();
-
 }
 
 void pesquisar_curso() {
-    cabecalho("CURSO > PESQUISAR");
+    cabecalho("CURSO >"BOLD YELLOW" PESQUISAR"RESET);
     int ic; char codigo[MAX_CURSOS];
 
     while (1) {
@@ -981,6 +981,7 @@ opcao_sala:
         if (turmas[i].numero == numero) qtd_aluno++;
     }
 
+    if (qtd_aluno == 0) return;
     // Exclus∆o adicional: turma inteira
     printf("\n%*sTurma tem %d discente(s) matriculado(s)\n", MARGEM, "", qtd_aluno);
     printf("%*sExcluir turma %d de %s?\n", MARGEM, "", numero, curso.nome);
@@ -990,13 +991,11 @@ opcao_sala:
         printf("\n%*s[!] Exclus∆o Cancelada.", MARGEM, "");
     } else {
         // Exclui todos discente da turma a ser removida.
-        while (itx != -1) {
+        while ((itx = buscar_turma_numero(numero)) != -1) {
             --cursos[ic].participantes;
-            for (i = itx; i < total_turmas; i++) {
+            for (i = itx; i < total_turmas; i++)
                 turmas[i] = turmas[i + 1];
-            }
             total_turmas--;
-            itx = buscar_turma_numero(numero);
         }
         salvar_turma();
         salvar_cursos();
@@ -1006,7 +1005,7 @@ opcao_sala:
 
 void pesquisar_turma() {
     cabecalho("TURMA > PESQUISAR");
-    int i, ic, it, nt;
+    int i, ic, it, nt; char temp[MAX_NOME];
 
     while (1) {
         nt = ler_inteiro("N£mero da turma: ", 0, MAX_SALAS);
@@ -1022,8 +1021,8 @@ void pesquisar_turma() {
         printf(YELLOW"\n%*s%s\n"RESET, MARGEM, "", "[!] DIGITE NOVAMENTE OU ZERO PARA VOLTAR");
 
         curso_existe(turmas[it].codigo_curso, &ic);
-        para_maiusculo(cursos[ic].nome, cursos[ic].nome);
-        gotoxy(MARGEM, 7); printf("TURMA DE %s", cursos[ic].nome);
+        para_maiusculo(temp, cursos[ic].nome);
+        gotoxy(MARGEM, 7); printf("TURMA DE %s", temp);
 
         gotoxy(MARGEM, 9); // Exibe a tabela na parte inferior
         printf("%-10s %-15s %-10s %-10s %-10s %-10s",
@@ -1216,7 +1215,7 @@ void relat_G() {
 
     int n_turma = 1, it, i;
     int qtd_aluno[MAX_SALAS + 1] = {}; // qtd de aluno por sala (°ndice = sala)
-    float somatorio_nota[MAX_SALAS] = {};
+    float somatorio_nota[MAX_SALAS + 1] = {};
 
     while (n_turma <= MAX_SALAS) {
         // verifica se turma existe

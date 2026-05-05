@@ -18,4 +18,3 @@
 12345678918|Ludwig Van Beethoven|26
 12345678916|Marcel Duchamp|32
 12345678920|Clara Schumann|28
-12312312300|D‚bora Santos|19
